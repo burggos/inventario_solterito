@@ -38,7 +38,7 @@ En Windows:
 python -m venv venv
 venv\Scripts\activate
 ```
-3. Instalar dependencias
+### 3. Instalar dependencias
 El archivo requirements.txt contiene todas las librerías necesarias.
 
 ```bash
@@ -50,20 +50,20 @@ Si no tienes requirements.txt, puedes generarlo después de instalar las depende
 pip install django pillow
 pip freeze > requirements.txt
 ```
-4. Configurar la base de datos
+### 4. Configurar la base de datos
 Aplica las migraciones para crear las tablas en la base de datos (SQLite por defecto).
 
 ```bash
 python manage.py migrate
 ```
-5. Crear un superusuario (para acceder al panel admin)
+### 5. Crear un superusuario (para acceder al panel admin)
 ```bash
 python manage.py createsuperuser
 ```
 Sigue las instrucciones: ingresa nombre de usuario, correo y contraseña.
 Ejemplo: admin, admin@example.com, admin123 (no uses contraseñas débiles en producción).
 
-6. Ejecutar el servidor de desarrollo
+### 6. Ejecutar el servidor de desarrollo
 ```bash
 python manage.py runserver
 ```
@@ -72,7 +72,7 @@ Verás un mensaje como:
 ```text
 Starting development server at http://127.0.0.1:8000/
 ```
-7. Acceder a la aplicación
+### 7. Acceder a la aplicación
 Panel de administración: http://127.0.0.1:8000/admin
 Inicia sesión con el superusuario que creaste.
 

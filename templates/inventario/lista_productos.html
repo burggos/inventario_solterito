@@ -1,0 +1,44 @@
+<!-- templates/inventario/lista_productos.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Productos - El Solterito{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold text-teal-800 mb-6">Inventario de Productos</h1>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for producto in productos %}
+        <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition">
+            {% if producto.imagen %}
+                <img src="{{ producto.imagen.url }}" alt="{{ producto.nombre }}" class="w-full h-48 object-cover">
+            {% else %}
+                <div class="w-full h-48 bg-gray-200 flex items-center justify-center text-gray-500">
+                    Sin imagen
+                </div>
+            {% endif %}
+            <div class="p-4">
+                <h2 class="text-xl font-semibold text-gray-800">{{ producto.nombre }}</h2>
+                <p class="text-gray-600 mt-1">{{ producto.descripcion|truncatechars:80 }}</p>
+                <div class="mt-4 flex justify-between items-center">
+                    <span class="text-2xl font-bold text-teal-600">${{ producto.precio }}</span>
+                    <span class="px-2 py-1 {% if producto.stock <= producto.stock_minimo %}bg-red-100 text-red-800{% else %}bg-green-100 text-green-800{% endif %} rounded-full text-sm">
+                        Stock: {{ producto.stock }}
+                    </span>
+                </div>
+                <div class="mt-4 flex space-x-2">
+                    <a href="#" class="flex-1 bg-teal-500 hover:bg-teal-600 text-white text-center py-2 rounded transition">
+                        Ver detalles
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full text-center py-12">
+            <p class="text-gray-500 text-lg">No hay productos disponibles en este momento.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
