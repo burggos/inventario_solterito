@@ -3,24 +3,182 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}El Solterito{% endblock %}</title>
+    <title>{% block title %}El Solterito - Gestión de Inventario{% endblock %}</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Fuentes de Google (opcional) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
     {% load static %}
     <link rel="stylesheet" href="{% static 'css/estilo.css' %}">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+    <!-- Configuración personalizada de Tailwind (opcional) -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0f766e',   // teal-700
+                        secondary: '#f59e0b',  // amber-500
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
 </head>
-<body class="bg-gray-100">
-    <nav class="bg-teal-700 text-white p-4 shadow-lg">
-        <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-2xl font-bold">Tienda El Solterito</h1>
-            <div>
-                <a href="/" class="px-3 py-2 hover:bg-teal-600 rounded">Inicio</a>
-                <a href="/admin" class="px-3 py-2 hover:bg-teal-600 rounded">Admin</a>
+<body class="bg-gray-50 text-gray-800 antialiased">
+
+    {% if request.resolver_match.url_name != 'login' %}
+    <!-- Navbar mejorado con diseño moderno y responsive -->
+    <nav class="bg-white shadow-md border-b border-gray-200 sticky top-0 z-50">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo / Marca -->
+                <div class="flex-shrink-0">
+                    <a href="{% url 'inventario:lista_productos' %}" class="text-2xl font-bold text-primary hover:text-teal-800 transition">
+                        🏪 El Solterito
+                    </a>
+                </div>
+
+                <!-- Menú para desktop (oculto en móvil) -->
+                <div class="hidden md:flex md:items-center md:space-x-1">
+                    <a href="{% url 'inventario:lista_productos' %}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-primary hover:bg-teal-50 transition">Inicio</a>
+                    <a href="{% url 'inventario:lista_movimientos' %}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-primary hover:bg-teal-50 transition">Movimientos</a>
+                    <a href="{% url 'inventario:reportes' %}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-primary hover:bg-teal-50 transition">Reportes</a>
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'inventario:crear_producto' %}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-primary hover:bg-teal-50 transition">Nuevo producto</a>
+                        
+                        <!-- Dropdown de usuario con click (JS incluido) -->
+                        <div class="relative ml-3" id="user-dropdown-container">
+                            <button id="user-dropdown-button" class="flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-teal-50 focus:outline-none">
+                                <span>{{ user.username }}</span>
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+                            <!-- Dropdown (oculto por defecto) -->
+                            <div id="user-dropdown-menu" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 border border-gray-200 hidden">
+                                <form method="post" action="{% url 'logout' %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-teal-50 hover:text-primary">
+                                        Cerrar sesión
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    {% else %}
+                        <a href="{% url 'login' %}" class="px-4 py-2 rounded-md text-sm font-medium text-white bg-primary hover:bg-teal-800 transition shadow-sm">Iniciar sesión</a>
+                    {% endif %}
+                </div>
+
+                <!-- Botón de menú móvil (hamburguesa) -->
+                <div class="md:hidden flex items-center">
+                    <button type="button" id="mobile-menu-button" class="text-gray-700 hover:text-primary focus:outline-none">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Menú móvil (oculto por defecto, se muestra con JS simple) -->
+        <div class="md:hidden hidden" id="mobile-menu">
+            <div class="px-2 pt-2 pb-3 space-y-1">
+                <a href="{% url 'inventario:lista_productos' %}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary hover:bg-teal-50">Inicio</a>
+                <a href="{% url 'inventario:lista_movimientos' %}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary hover:bg-teal-50">Movimientos</a>
+                <a href="{% url 'inventario:reportes' %}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary hover:bg-teal-50">Reportes</a>
+                {% if user.is_authenticated %}
+                    <a href="{% url 'inventario:crear_producto' %}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary hover:bg-teal-50">Nuevo producto</a>
+                    <span class="block px-3 py-2 text-base font-medium text-gray-500">Hola, {{ user.username }}</span>
+                    <form method="post" action="{% url 'logout' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary hover:bg-teal-50">
+                            Cerrar sesión
+                        </button>
+                    </form>
+                {% else %}
+                    <a href="{% url 'login' %}" class="block px-3 py-2 rounded-md text-base font-medium text-white bg-primary hover:bg-teal-800">Iniciar sesión</a>
+                {% endif %}
             </div>
         </div>
     </nav>
-    
-    <main>
+    {% endif %}
+
+    <!-- Mensajes flash (mejorados con estilo de alerta) -->
+    {% if messages %}
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+            {% for message in messages %}
+                <div class="flex items-center justify-between p-4 mb-4 rounded-lg shadow-sm 
+                    {% if message.tags == 'success' %}bg-green-50 border-l-4 border-green-500 text-green-800
+                    {% elif message.tags == 'error' %}bg-red-50 border-l-4 border-red-500 text-red-800
+                    {% elif message.tags == 'warning' %}bg-yellow-50 border-l-4 border-yellow-500 text-yellow-800
+                    {% else %}bg-blue-50 border-l-4 border-blue-500 text-blue-800{% endif %}">
+                    <div class="flex items-center">
+                        <span class="mr-2">
+                            {% if message.tags == 'success' %}✅
+                            {% elif message.tags == 'error' %}❌
+                            {% elif message.tags == 'warning' %}⚠️
+                            {% else %}ℹ️{% endif %}
+                        </span>
+                        <span>{{ message }}</span>
+                    </div>
+                    <button onclick="this.parentElement.remove()" class="text-gray-500 hover:text-gray-700">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Contenido principal -->
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {% block content %}{% endblock %}
     </main>
+
+    <!-- Footer simple (opcional) -->
+    {% if request.resolver_match.url_name != 'login' %}
+    <footer class="bg-white border-t border-gray-200 mt-12">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-4 text-center text-gray-500 text-sm">
+            &copy; {% now "Y" %} Tienda El Solterito - Sistema de Gestión de Inventario
+        </div>
+    </footer>
+    {% endif %}
+
+    <!-- JavaScript para menú móvil y dropdown de usuario -->
+    <script>
+        // Menú móvil
+        const btn = document.getElementById('mobile-menu-button');
+        const menu = document.getElementById('mobile-menu');
+        if (btn && menu) {
+            btn.addEventListener('click', () => {
+                menu.classList.toggle('hidden');
+            });
+        }
+
+        // Dropdown de usuario con click y cierre al hacer clic fuera
+        const userButton = document.getElementById('user-dropdown-button');
+        const userMenu = document.getElementById('user-dropdown-menu');
+
+        if (userButton && userMenu) {
+            userButton.addEventListener('click', (e) => {
+                e.stopPropagation(); // Evita que el clic llegue al document y cierre inmediatamente
+                userMenu.classList.toggle('hidden');
+            });
+
+            document.addEventListener('click', (e) => {
+                // Cierra el menú si el clic no fue en el botón ni en el menú
+                if (!userButton.contains(e.target) && !userMenu.contains(e.target)) {
+                    userMenu.classList.add('hidden');
+                }
+            });
+        }
+    </script>
 </body>
 </html>

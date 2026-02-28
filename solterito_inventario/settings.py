@@ -3,14 +3,22 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# 🔹 Agregar la carpeta 'apps' al path de Python
+# Redirecciones de autenticación
+LOGIN_URL = 'login'                              # o '/accounts/login/'
+LOGIN_REDIRECT_URL = 'inventario:lista_productos'  # o simplemente '/'
+LOGOUT_REDIRECT_URL = 'login'                    # vuelve al formulario
+
+
 sys.path.append(str(BASE_DIR / 'apps'))
 
 # SECRET_KEY (usa la que generaste)
 SECRET_KEY = 'j0)6hp%=z0+y6e^t5ip#h@#$jnfy+kd#2d^v%=dg4t3u0h2s2#'
 
 DEBUG = True
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = [
+    '127.0.0.1',
+    '192.168.1.52',      # ← Agrega esta línea
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',

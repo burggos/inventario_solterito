@@ -1,0 +1,14 @@
+<!-- templates/registration/logged_out.html -->
+{% extends 'base.html' %}
+
+{% block title %}Sesión cerrada - El Solterito{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 text-center">
+    <h1 class="text-2xl font-bold text-teal-800 mb-4">Has cerrado sesión</h1>
+    <p class="mb-4">Gracias por usar el sistema de inventario.</p>
+    <a href="{% url 'login' %}" class="bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded">
+        Volver a iniciar sesión
+    </a>
+</div>
+{% endblock %}
