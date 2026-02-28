@@ -19,7 +19,7 @@ Sigue estos pasos en orden para levantar el proyecto en tu máquina local.
 ### 1. Clonar el repositorio
 
 ```bash
-git clone <url-del-repositorio>
+git clone https://github.com/burggos/inventario_solterito.git
 cd solterito_inventario
 ```
 Si no usas Git, simplemente descomprime la carpeta del proyecto y accede a ella desde la terminal.
