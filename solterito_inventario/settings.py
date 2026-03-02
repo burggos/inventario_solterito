@@ -17,7 +17,6 @@ SECRET_KEY = 'j0)6hp%=z0+y6e^t5ip#h@#$jnfy+kd#2d^v%=dg4t3u0h2s2#'
 DEBUG = True
 ALLOWED_HOSTS = [
     '127.0.0.1',
-    '192.168.1.52',      # ← Agrega esta línea
 ]
 
 INSTALLED_APPS = [
@@ -27,7 +26,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'inventario',  # 👈 Debe estar exactamente así (sin puntos, sin apps.)
+    'inventario',
 ]
 
 MIDDLEWARE = [
