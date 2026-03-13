@@ -1,150 +1,137 @@
 # Sistema de Gestión de Inventario - Tienda El Solterito
 
-Proyecto de desarrollo de una página web para la gestión de inventario de la tienda "El Solterito" en Montería.  
-Desarrollado con Django + Tailwind CSS.
+Esta aplicación Django proporciona un pequeño sistema de inventario para la tienda "El Solterito". La implementación usa **Django 4.x**, Tailwind CSS para el frontend y está diseñada para ser fácil de desplegar localmente o en un servidor.
 
-## Requisitos previos
+---
 
-Asegúrate de tener instalado en tu sistema:
+## 📦 Requisitos previos
 
-- **Python** 3.8 o superior
-- **pip** (gestor de paquetes de Python)
-- **Git** (opcional, para clonar el repositorio)
-- **Navegador web** moderno
+Antes de comenzar asegúrate de tener:
 
-##  Instalación y puesta en marcha
+- **Python 3.8+** (usa `python3 --version`)
+- **pip** (gestor de paquetes)
+- **Git** (opcional, para clonar el repo)
+- Un **navegador web** moderno
 
-Sigue estos pasos en orden para levantar el proyecto en tu máquina local.
+> 💡 Opcionalmente puedes instalar [Poetry](https://python-poetry.org/) o [pipenv] para gestionar el entorno.
 
-### 1. Clonar el repositorio
+---
 
-```bash
-git clone https://github.com/burggos/inventario_solterito.git
-cd solterito_inventario
-```
-Si no usas Git, simplemente descomprime la carpeta del proyecto y accede a ella desde la terminal.
+## 🚀 Montar el proyecto en otra máquina
 
-### 2. Crear y activar un entorno virtual (recomendado)
-   
-En Linux/Mac:
+1. **Clona el repositorio** (o copia la carpeta) y entra en él:
+   ```bash
+   git clone https://github.com/burggos/inventario_solterito.git
+   cd inventario_solterito
+   ```
 
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-En Windows:
+2. **Configura un entorno virtual** e instálalo:
+   ```bash
+   python3 -m venv venv             # crea el virtualenv
+   source venv/bin/activate         # Linux/macOS
+   # venv\Scripts\activate       # Windows
 
-```bash
-python -m venv venv
-venv\Scripts\activate
-```
-### 3. Instalar dependencias
-El archivo requirements.txt contiene todas las librerías necesarias.
+   pip install -r requirements.txt  # instala dependencias
+   ```
+   > Si no existe `requirements.txt`, instala manualmente `django pillow` y luego ejecuta `pip freeze > requirements.txt`.
 
-```bash
-pip install -r requirements.txt
-```
-Si no tienes requirements.txt, puedes generarlo después de instalar las dependencias manualmente:
+3. **Variables de entorno y ajustes**
+   - copia el archivo de ejemplo `settings.py` si requieres diferenciar entornos.
+   - Opcional: define `DATABASE_URL` o edita `DATABASES` en `settings.py` para apuntar a PostgreSQL, MySQL, etc.
+   - Asegúrate de ajustar `ALLOWED_HOSTS` cuando salgas de `DEBUG`.
 
-```bash
-pip install django pillow
-pip freeze > requirements.txt
-```
-### 4. Configurar la base de datos
-Aplica las migraciones para crear las tablas en la base de datos (SQLite por defecto).
+4. **Aplica migraciones y crea usuario**
+   ```bash
+   python manage.py migrate
+   python manage.py createsuperuser
+   ```
 
-```bash
-python manage.py migrate
-```
-### 5. Crear un superusuario (para acceder al panel admin)
-```bash
-python manage.py createsuperuser
-```
-Sigue las instrucciones: ingresa nombre de usuario, correo y contraseña.
-Ejemplo: admin, admin@example.com, admin123 (no uses contraseñas débiles en producción).
+5. **Carga datos iniciales (opcional)**
+   Puedes ejecutar fixtures `python manage.py loaddata initial_data.json` si existe.
 
-### 6. Ejecutar el servidor de desarrollo
-```bash
-python manage.py runserver
-```
-Verás un mensaje como:
+6. **Ejecuta el servidor de desarrollo**
+   ```bash
+   python manage.py runserver
+   ```
+   Accede en `http://127.0.0.1:8000/`.
 
+7. **Pruebas**
+   ```bash
+   python manage.py test
+   ```
+   Se usa SQLite automáticamente en modo test (ver `settings.py`).
+
+---
+
+## 🗂 Estructura del proyecto
 ```text
-Starting development server at http://127.0.0.1:8000/
-```
-### 7. Acceder a la aplicación
-Panel de administración: http://127.0.0.1:8000/admin
-Inicia sesión con el superusuario que creaste.
-
-Páginas públicas: (cuando las desarrollemos) estarán en la raíz, por ahora solo el admin está disponible.
-
-Estructura del proyecto
-```text
-solterito_inventario/
-├── manage.py
+inventario_solterito/
+├── manage.py              # script de administración
 ├── requirements.txt
-├── db.sqlite3
-├── solterito_inventario/       # Configuración principal
+├── db.sqlite3             # base de datos por defecto (cambia en producción)
+├── solterito_inventario/  # configuración de Django
 │   ├── settings.py
 │   ├── urls.py
 │   └── ...
-├── apps/                        # Aplicaciones Django
-│   └── inventario/               # App de inventario
+├── apps/                  # aplicaciones locales
+│   └── inventario/        # app principal
 │       ├── models.py
-│       ├── admin.py
 │       ├── views.py
+│       ├── forms.py
+│       ├── tests.py       # pruebas unitarias
 │       └── ...
-├── static/                       # Archivos estáticos (CSS, JS, imágenes)
-├── media/                         # Archivos subidos por usuarios (fotos de productos)
-└── templates/                     # Plantillas HTML
+├── static/                # recursos estáticos (CSS, JS, imágenes)
+├── media/                 # archivos subidos por usuarios
+└── templates/             # plantillas HTML
     ├── base.html
     └── inventario/
 ```
-🛠️ Uso básico (admin)
-Ve al panel de administración (/admin).
 
-Agrega Categorías (ej: "Lácteos", "Bebidas").
+---
 
-Agrega Productos con nombre, precio, stock, imagen, etc.
+## ⚙️ Uso básico
 
-Registra Movimientos (entradas/salidas) para llevar el historial.
+1. Inicia sesión en el admin (`/admin`) con el superusuario.
+2. Crea algunas **Categorías** (e.g. Lácteos, Aseo).
+3. Agrega **Productos** con nombre, precio, stock, etc.
+4. Registra **Movimientos** (entradas/salidas) para llevar el historial.
 
-Posibles errores y soluciones
-Error: django.core.exceptions.ImproperlyConfigured: settings.DATABASES is improperly configured.
-Causa: Falta la configuración de base de datos en settings.py.
+La web principal ya muestra listas filtrables de productos y reportes.
 
-Solución: Verifica que DATABASES esté definido como en el archivo de ejemplo.
+---
 
-Error: CommandError: You must set settings.ALLOWED_HOSTS if DEBUG is False.
-Causa: Tienes DEBUG = False pero no has definido ALLOWED_HOSTS.
+## 🛠️ Problemas comunes
 
-Solución: En desarrollo, cambia DEBUG = True en settings.py.
+- **`ImproperlyConfigured: settings.DATABASES...`** – Revisa `DATABASES`.
+- **`ALLOWED_HOSTS`/`DEBUG`** – cuando `DEBUG=False`, añade tus dominios a `ALLOWED_HOSTS`.
+- **`No installed app with label 'inventario'`** – añade `sys.path.append(str(BASE_DIR / 'apps'))` y `'inventario'` a `INSTALLED_APPS`.
+- **Imágenes no suben (/PIL)** – instala `Pillow` con `pip install pillow`.
 
-Error: No installed app with label 'inventario'
-Causa: La app no está registrada en INSTALLED_APPS o no se encuentra en el PYTHONPATH.
+---
 
-Solución: Verifica que en settings.py tengas:
+## 🧩 Contribuir
 
-python
-import sys
-sys.path.append(str(BASE_DIR / 'apps'))
-INSTALLED_APPS = [..., 'inventario']
-Error al subir imágenes: ModuleNotFoundError: No module named 'PIL'
-Causa: Falta instalar Pillow.
+1. Crea una rama para tu feature:
+   ```bash
+   git checkout -b feature/nombre
+   ```
+2. Trabaja y haz commits claros:
+   ```bash
+   git commit -am "Añade X"
+   ```
+3. Empuja y abre un pull request:
+   ```bash
+   git push origin feature/nombre
+   ```
 
-Solución: Ejecuta pip install pillow.
+Revisa que todas las pruebas pasen y que el código siga el estilo del proyecto.
 
-Contribuir
-Si deseas contribuir al proyecto:
+---
 
-Crea una rama con tu feature: git checkout -b feature/nueva-funcionalidad
+## 📄 Licencia
+Proyecto con fines académicos para el Instituto Tecnológico San Agustín.
 
-Haz commit de tus cambios: git commit -m 'Agrega nueva funcionalidad'
+---
 
-Sube la rama: git push origin feature/nueva-funcionalidad
-
-Abre un Pull Request.
-
-📄 Licencia
-Este proyecto es con fines académicos para el Instituto Tecnológico San Agustín.
+Si necesitas ayuda adicional, contáctame o abre un issue en el repositorio. ¡Gracias por usar o contribuir!  
 

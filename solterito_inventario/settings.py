@@ -60,6 +60,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'solterito_inventario.wsgi.application'
 
 # Base de datos
+# Use PostgreSQL by default, but switch to SQLite when running tests
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -70,6 +71,13 @@ DATABASES = {
         'PORT': '5432',
     }
 }
+
+# sqlite simplifies tests when the postgres user lacks CREATE DATABASE privileges
+if 'test' in sys.argv:
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'test.sqlite3',
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},

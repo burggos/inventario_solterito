@@ -4,7 +4,6 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.db.models import Q, F
 from django.core.paginator import Paginator
-
 from .models import Movimiento, Producto, Categoria
 from .forms import MovimientoForm, ProductoForm
 from django.db.models import Sum, F, Count, Q

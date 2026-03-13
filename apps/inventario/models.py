@@ -42,6 +42,27 @@ class Producto(models.Model):
     def __str__(self):
         return f"{self.nombre} (Stock: {self.stock})"
 
+    def clean(self):
+        # validaciones de negocio simple
+        from django.core.exceptions import ValidationError
+
+        if self.precio is not None and self.precio < 0:
+            raise ValidationError({'precio': 'El precio no puede ser negativo.'})
+        if self.stock < 0:
+            raise ValidationError({'stock': 'El stock no puede ser negativo.'})
+        if self.stock_minimo < 0:
+            raise ValidationError({'stock_minimo': 'El stock mínimo no puede ser negativo.'})
+        if self.stock_minimo > self.stock:
+            raise ValidationError({'stock_minimo': 'El stock mínimo no puede superar al stock actual.'})
+
+        # código de barras único ya está en la base, pero aseguramos limpieza
+        if self.codigo_barras:
+            qs = Producto.objects.filter(codigo_barras=self.codigo_barras)
+            if self.pk:
+                qs = qs.exclude(pk=self.pk)
+            if qs.exists():
+                raise ValidationError({'codigo_barras': 'Este código de barras ya está en uso.'})
+
     @property
     def necesita_reposicion(self):
         """Indica si el stock está por debajo del mínimo"""
