@@ -8,15 +8,15 @@
     <h1 class="text-3xl font-bold text-teal-800 mb-6">Inventario de Productos</h1>
     
     <!-- Formulario de búsqueda y filtros -->
-    <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-6">
         <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-                <label for="q" class="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
-                <input type="text" name="q" id="q" value="{{ query }}" placeholder="Nombre o descripción" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500">
+                <label for="q" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Buscar</label>
+                <input type="text" name="q" id="q" value="{{ query }}" placeholder="Nombre o descripción" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-400">
             </div>
             <div>
-                <label for="categoria" class="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
-                <select name="categoria" id="categoria" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500">
+                <label for="categoria" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Categoría</label>
+                <select name="categoria" id="categoria" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500 dark:bg-gray-700 dark:text-gray-200">
                     <option value="">Todas</option>
                     {% for cat in categorias %}
                         <option value="{{ cat.id }}" {% if categoria_seleccionada == cat.id|stringformat:"s" %}selected{% endif %}>{{ cat.nombre }}</option>
@@ -25,12 +25,12 @@
             </div>
             <div class="flex items-center">
                 <label class="inline-flex items-center">
-                    <input type="checkbox" name="stock_bajo" value="on" {% if stock_bajo %}checked{% endif %} class="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded">
+                    <input type="checkbox" name="stock_bajo" value="on" {% if stock_bajo %}checked{% endif %} class="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 dark:border-gray-600 rounded">
                     <span class="ml-2 text-sm text-gray-700">Solo stock bajo</span>
                 </label>
             </div>
             <div class="flex items-end">
-                <button type="submit" class="w-full bg-teal-500 hover:bg-teal-600 text-white font-semibold py-2 px-4 rounded-md transition">
+                <button type="submit" class="w-full bg-teal-500 hover:bg-teal-600 dark:bg-teal-600 dark:hover:bg-teal-700 text-white font-semibold py-2 px-4 rounded-md transition">
                     Filtrar
                 </button>
             </div>
@@ -40,25 +40,25 @@
     <!-- Lista de productos -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for producto in page_obj %}
-        <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition">
             {% if producto.imagen %}
                 <img src="{{ producto.imagen.url }}" alt="{{ producto.nombre }}" class="w-full h-48 object-cover">
             {% else %}
-                <div class="w-full h-48 bg-gray-200 flex items-center justify-center text-gray-500">
+                <div class="w-full h-48 bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-gray-500 dark:text-gray-400">
                     Sin imagen
                 </div>
             {% endif %}
             <div class="p-4">
-                <h2 class="text-xl font-semibold text-gray-800">{{ producto.nombre }}</h2>
-                <p class="text-gray-600 mt-1">{{ producto.descripcion|truncatechars:80 }}</p>
+                <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">{{ producto.nombre }}</h2>
+                <p class="text-gray-600 dark:text-gray-400 mt-1">{{ producto.descripcion|truncatechars:80 }}</p>
                 <div class="mt-4 flex justify-between items-center">
                     <span class="text-2xl font-bold text-teal-600">${{ producto.precio }}</span>
-                    <span class="px-2 py-1 {% if producto.stock <= producto.stock_minimo %}bg-red-100 text-red-800{% else %}bg-green-100 text-green-800{% endif %} rounded-full text-sm">
+                    <span class="px-2 py-1 {% if producto.stock <= producto.stock_minimo %}bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200{% else %}bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200{% endif %} rounded-full text-sm">
                         Stock: {{ producto.stock }}
                     </span>
                 </div>
                 <div class="mt-4 flex space-x-2">
-                    <a href="{% url 'inventario:detalle_producto' producto.pk %}" class="flex-1 bg-teal-500 hover:bg-teal-600 text-white text-center py-2 rounded transition">
+                    <a href="{% url 'inventario:detalle_producto' producto.pk %}" class="flex-1 bg-teal-500 hover:bg-teal-600 dark:bg-teal-600 dark:hover:bg-teal-700 text-white text-center py-2 rounded transition">
                         Ver detalles
                     </a>
                 </div>
@@ -66,25 +66,37 @@
         </div>
         {% empty %}
         <div class="col-span-full text-center py-12">
-            <p class="text-gray-500 text-lg">No hay productos que coincidan con los filtros.</p>
+            <p class="text-gray-500 dark:text-gray-400 text-lg">No hay productos que coincidan con los filtros.</p>
         </div>
         {% endfor %}
     </div>
 
-    <!-- Paginación -->
+    <!-- Paginación mejorada con números de página -->
     {% if page_obj.has_other_pages %}
     <div class="mt-8 flex justify-center">
         <nav class="inline-flex rounded-md shadow">
             {% if page_obj.has_previous %}
-                <a href="?{% if query %}q={{ query }}&{% endif %}{% if categoria_seleccionada %}categoria={{ categoria_seleccionada }}&{% endif %}{% if stock_bajo %}stock_bajo=on&{% endif %}page={{ page_obj.previous_page_number }}" class="px-4 py-2 bg-white border border-gray-300 rounded-l-md hover:bg-gray-50">Anterior</a>
+                <a href="?{% if query %}q={{ query }}&{% endif %}{% if categoria_seleccionada %}categoria={{ categoria_seleccionada }}&{% endif %}{% if stock_bajo %}stock_bajo=on&{% endif %}page=1" class="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-l-md hover:bg-gray-50 dark:hover:bg-gray-700 text-sm dark:text-gray-200">Primera</a>
+                <a href="?{% if query %}q={{ query }}&{% endif %}{% if categoria_seleccionada %}categoria={{ categoria_seleccionada }}&{% endif %}{% if stock_bajo %}stock_bajo=on&{% endif %}page={{ page_obj.previous_page_number }}" class="px-3 py-2 bg-white dark:bg-gray-800 border-t border-b border-r border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm dark:text-gray-200">Anterior</a>
             {% endif %}
             
-            <span class="px-4 py-2 bg-white border-t border-b border-gray-300">
-                Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
-            </span>
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                    <span class="px-3 py-2 bg-teal-500 text-white border border-teal-500 text-sm">{{ num }}</span>
+                {% elif num > page_obj.number|add:-3 and num < page_obj.number|add:3 %}
+                    <a href="?{% if query %}q={{ query }}&{% endif %}{% if categoria_seleccionada %}categoria={{ categoria_seleccionada }}&{% endif %}{% if stock_bajo %}stock_bajo=on&{% endif %}page={{ num }}" class="px-3 py-2 bg-white dark:bg-gray-800 border-t border-b border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm dark:text-gray-200">{{ num }}</a>
+                {% elif num == page_obj.paginator.num_pages and page_obj.number < page_obj.paginator.num_pages|add:-3 %}
+                    <span class="px-2 py-2 bg-white dark:bg-gray-800 border-t border-b border-gray-300 dark:border-gray-600 text-sm dark:text-gray-200">...</span>
+                    <a href="?{% if query %}q={{ query }}&{% endif %}{% if categoria_seleccionada %}categoria={{ categoria_seleccionada }}&{% endif %}{% if stock_bajo %}stock_bajo=on&{% endif %}page={{ num }}" class="px-3 py-2 bg-white dark:bg-gray-800 border-t border-b border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm dark:text-gray-200">{{ num }}</a>
+                {% elif num == 1 and page_obj.number > 4 %}
+                    <a href="?{% if query %}q={{ query }}&{% endif %}{% if categoria_seleccionada %}categoria={{ categoria_seleccionada }}&{% endif %}{% if stock_bajo %}stock_bajo=on&{% endif %}page={{ num }}" class="px-3 py-2 bg-white dark:bg-gray-800 border-t border-b border-l border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm dark:text-gray-200">{{ num }}</a>
+                    <span class="px-2 py-2 bg-white dark:bg-gray-800 border-t border-b border-gray-300 dark:border-gray-600 text-sm dark:text-gray-200">...</span>
+                {% endif %}
+            {% endfor %}
             
             {% if page_obj.has_next %}
-                <a href="?{% if query %}q={{ query }}&{% endif %}{% if categoria_seleccionada %}categoria={{ categoria_seleccionada }}&{% endif %}{% if stock_bajo %}stock_bajo=on&{% endif %}page={{ page_obj.next_page_number }}" class="px-4 py-2 bg-white border border-gray-300 rounded-r-md hover:bg-gray-50">Siguiente</a>
+                <a href="?{% if query %}q={{ query }}&{% endif %}{% if categoria_seleccionada %}categoria={{ categoria_seleccionada }}&{% endif %}{% if stock_bajo %}stock_bajo=on&{% endif %}page={{ page_obj.next_page_number }}" class="px-3 py-2 bg-white dark:bg-gray-800 border-t border-b border-l border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm dark:text-gray-200">Siguiente</a>
+                <a href="?{% if query %}q={{ query }}&{% endif %}{% if categoria_seleccionada %}categoria={{ categoria_seleccionada }}&{% endif %}{% if stock_bajo %}stock_bajo=on&{% endif %}page={{ page_obj.paginator.num_pages }}" class="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-r-md hover:bg-gray-50 dark:hover:bg-gray-700 text-sm dark:text-gray-200">Última</a>
             {% endif %}
         </nav>
     </div>

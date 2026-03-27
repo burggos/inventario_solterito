@@ -5,44 +5,43 @@
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
-    <h1 class="text-3xl font-bold text-teal-800 mb-6">Panel de Reportes</h1>
+    <h1 class="text-3xl font-bold text-teal-800 dark:text-teal-400 mb-6">Panel de Reportes</h1>
 
-    <!-- Tarjetas de KPIs -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-gray-500 text-sm uppercase">Total Productos</h3>
-            <p class="text-3xl font-bold text-teal-600">{{ total_productos }}</p>
+        <div class="card">
+            <h3 class="text-gray-500 dark:text-gray-400 text-sm uppercase">Total Productos</h3>
+            <p class="text-3xl font-bold text-teal-600 dark:text-teal-400">{{ total_productos }}</p>
         </div>
-        <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-gray-500 text-sm uppercase">Valor Inventario</h3>
-            <p class="text-3xl font-bold text-teal-600">${{ valor_inventario|floatformat:0 }}</p>
+        <div class="card">
+            <h3 class="text-gray-500 dark:text-gray-400 text-sm uppercase">Valor Inventario</h3>
+            <p class="text-3xl font-bold text-teal-600 dark:text-teal-400">${{ valor_inventario|floatformat:0 }}</p>
         </div>
-        <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-gray-500 text-sm uppercase">Stock Bajo</h3>
-            <p class="text-3xl font-bold text-red-600">{{ productos_stock_bajo }}</p>
+        <div class="card">
+            <h3 class="text-gray-500 dark:text-gray-400 text-sm uppercase">Stock Bajo</h3>
+            <p class="text-3xl font-bold text-red-600 dark:text-red-400">{{ productos_stock_bajo }}</p>
         </div>
-        <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-gray-500 text-sm uppercase">Movimientos Hoy</h3>
-            <p class="text-3xl font-bold text-teal-600">{{ movimientos_hoy }}</p>
+        <div class="card">
+            <h3 class="text-gray-500 dark:text-gray-400 text-sm uppercase">Movimientos Hoy</h3>
+            <p class="text-3xl font-bold text-teal-600 dark:text-teal-400">{{ movimientos_hoy }}</p>
         </div>
     </div>
 
     <!-- Gráfico de movimientos mensuales -->
-    <div class="bg-white rounded-lg shadow p-6 mb-8">
-        <h2 class="text-xl font-bold mb-4">Movimientos por Mes</h2>
+    <div class="card mb-8">
+        <h2 class="text-xl font-bold mb-4 dark:text-gray-200">Movimientos por Mes</h2>
         <canvas id="movimientosChart" height="100"></canvas>
     </div>
 
     <!-- Tabla de productos más vendidos -->
-    <div class="bg-white rounded-lg shadow p-6 mb-8">
-        <h2 class="text-xl font-bold mb-4">Productos más vendidos</h2>
+    <div class="card mb-8">
+        <h2 class="text-xl font-bold mb-4 dark:text-gray-200">Productos más vendidos</h2>
         <div class="overflow-x-auto">
             <table class="min-w-full">
-                <thead class="bg-gray-100">
+                <thead class="bg-gray-100 dark:bg-gray-700">
                     <tr>
-                        <th class="px-4 py-2 text-left">Producto</th>
-                        <th class="px-4 py-2 text-left">Categoría</th>
-                        <th class="px-4 py-2 text-left">Total vendido</th>
+                        <th class="table-header">Producto</th>
+                        <th class="table-header">Categoría</th>
+                        <th class="table-header">Total vendido</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -67,33 +66,33 @@
     </div>
 
     <!-- Tabla de productos con stock crítico -->
-    <div class="bg-white rounded-lg shadow p-6">
-        <h2 class="text-xl font-bold mb-4">Productos con stock bajo</h2>
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <h2 class="text-xl font-bold mb-4 dark:text-gray-200">Productos con stock bajo</h2>
         <div class="overflow-x-auto">
             <table class="min-w-full">
-                <thead class="bg-gray-100">
+                <thead class="bg-gray-100 dark:bg-gray-700">
                     <tr>
-                        <th class="px-4 py-2 text-left">Producto</th>
-                        <th class="px-4 py-2 text-left">Stock actual</th>
-                        <th class="px-4 py-2 text-left">Stock mínimo</th>
-                        <th class="px-4 py-2 text-left">Acción</th>
+                        <th class="px-4 py-2 text-left dark:text-gray-200">Producto</th>
+                        <th class="px-4 py-2 text-left dark:text-gray-200">Stock actual</th>
+                        <th class="px-4 py-2 text-left dark:text-gray-200">Stock mínimo</th>
+                        <th class="px-4 py-2 text-left dark:text-gray-200">Acción</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for producto in productos_criticos %}
-                    <tr class="border-t">
-                        <td class="px-4 py-2">{{ producto.nombre }}</td>
-                        <td class="px-4 py-2 text-red-600 font-bold">{{ producto.stock }}</td>
-                        <td class="px-4 py-2">{{ producto.stock_minimo }}</td>
+                    <tr class="border-t dark:border-gray-600">
+                        <td class="px-4 py-2 dark:text-gray-200">{{ producto.nombre }}</td>
+                        <td class="px-4 py-2 text-red-600 dark:text-red-400 font-bold">{{ producto.stock }}</td>
+                        <td class="px-4 py-2 dark:text-gray-200">{{ producto.stock_minimo }}</td>
                         <td class="px-4 py-2">
-                            <a href="{% url 'inventario:crear_movimiento' %}?producto={{ producto.pk }}" class="text-teal-600 hover:underline">
+                            <a href="{% url 'inventario:crear_movimiento' %}?producto={{ producto.pk }}" class="text-teal-600 dark:text-teal-400 hover:underline">
                                 + Registrar entrada
                             </a>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="4" class="px-4 py-2 text-center text-gray-500">No hay productos con stock bajo</td>
+                        <td colspan="4" class="px-4 py-2 text-center text-gray-500 dark:text-gray-400">No hay productos con stock bajo</td>
                     </tr>
                     {% endfor %}
                 </tbody>

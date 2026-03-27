@@ -7,31 +7,36 @@
 <div class="container mx-auto px-4 py-8 max-w-screen-sm">
     <h1 class="text-3xl font-bold text-teal-800 mb-6">Agregar Nuevo Producto</h1>
 
-    <div class="bg-white rounded-lg shadow-lg p-6 w-full">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full">
         <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
             
-            <!-- use a one‑column grid on mobile and only split at md, avoid spanning two columns when
-                 there is just one because some browsers may create implicit tracks and overflow -->
             <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
                 {% for field in form %}
                 <div class="w-full {% if field.name == 'descripcion' %}md:col-span-2{% endif %}">
-                    <label for="{{ field.id_for_label }}" class="block text-gray-700 font-medium mb-2">
-                        {{ field.label }}
+                    <label for="{{ field.id_for_label }}" class="block text-gray-700 dark:text-gray-300 font-medium mb-2">
+                        {{ field.label }}{% if field.field.required %} <span class="text-red-500">*</span>{% endif %}
                     </label>
+                    {% if field.name == 'descripcion' %}
                     {{ field }}
+                {% else %}
+                    {{ field }}
+                {% endif %}
                     {% if field.errors %}
                         <p class="text-red-500 text-sm mt-1">{{ field.errors.0 }}</p>
+                    {% endif %}
+                    {% if field.help_text %}
+                        <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">{{ field.help_text }}</p>
                     {% endif %}
                 </div>
                 {% endfor %}
             </div>
 
             <div class="mt-6 flex flex-col sm:flex-row sm:space-x-3 space-y-3 sm:space-y-0">
-                <button type="submit" class="bg-teal-500 hover:bg-teal-600 text-white px-6 py-2 rounded w-full sm:w-auto">
+                <button type="submit" class="btn-primary">
                     Guardar producto
                 </button>
-                <a href="{% url 'inventario:lista_productos' %}" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded w-full sm:w-auto text-center">
+                <a href="{% url 'inventario:lista_productos' %}" class="btn-secondary">
                     Cancelar
                 </a>
             </div>

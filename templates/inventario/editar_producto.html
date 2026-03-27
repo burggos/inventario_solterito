@@ -7,19 +7,22 @@
 <div class="container mx-auto px-4 py-8 max-w-4xl">
     <h1 class="text-3xl font-bold text-teal-800 mb-6">Editar Producto: {{ producto.nombre }}</h1>
 
-    <div class="bg-white rounded-lg shadow-lg p-6">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
         <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {% for field in form %}
-                <div class="{% if field.name == 'descripcion' %}col-span-2{% endif %}">
-                    <label for="{{ field.id_for_label }}" class="block text-gray-700 font-medium mb-2">
-                        {{ field.label }}
+                <div class="w-full {% if field.name == 'descripcion' %}md:col-span-2{% endif %}">
+                    <label for="{{ field.id_for_label }}" class="block text-gray-700 dark:text-gray-300 font-medium mb-2">
+                        {{ field.label }}{% if field.field.required %} <span class="text-red-500">*</span>{% endif %}
                     </label>
                     {{ field }}
                     {% if field.errors %}
                         <p class="text-red-500 text-sm mt-1">{{ field.errors.0 }}</p>
+                    {% endif %}
+                    {% if field.help_text %}
+                        <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">{{ field.help_text }}</p>
                     {% endif %}
                 </div>
                 {% endfor %}
@@ -27,16 +30,16 @@
 
             {% if producto.imagen %}
             <div class="mt-4">
-                <p class="text-sm text-gray-600">Imagen actual:</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Imagen actual:</p>
                 <img src="{{ producto.imagen.url }}" alt="{{ producto.nombre }}" class="mt-2 h-32 w-32 object-cover rounded">
             </div>
             {% endif %}
 
             <div class="mt-6 flex space-x-3">
-                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded">
+                <button type="submit" class="btn-primary">
                     Actualizar producto
                 </button>
-                <a href="{% url 'inventario:detalle_producto' producto.pk %}" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded">
+                <a href="{% url 'inventario:detalle_producto' producto.pk %}" class="btn-secondary">
                     Cancelar
                 </a>
             </div>
