@@ -1,137 +1,222 @@
 # Sistema de Gestión de Inventario - Tienda El Solterito
 
-Esta aplicación Django proporciona un pequeño sistema de inventario para la tienda "El Solterito". La implementación usa **Django 4.x**, Tailwind CSS para el frontend y está diseñada para ser fácil de desplegar localmente o en un servidor.
+Aplicación web desarrollada con Django para la gestión de inventario de la tienda **El Solterito**. Permite administrar productos, categorías y movimientos de stock de forma sencilla.
+
+El proyecto utiliza:
+
+* Django 4.x (backend)
+* Tailwind CSS (frontend)
+* SQLite por defecto (configurable a otros motores)
+
+Está diseñado para ejecutarse tanto en entornos locales como en servidores.
 
 ---
 
-## 📦 Requisitos previos
+## Requisitos
 
-Antes de comenzar asegúrate de tener:
+Antes de iniciar, asegúrese de contar con:
 
-- **Python 3.8+** (usa `python3 --version`)
-- **pip** (gestor de paquetes)
-- **Git** (opcional, para clonar el repo)
-- Un **navegador web** moderno
+* Python 3.8 o superior
+* pip (gestor de paquetes de Python)
+* Git (opcional)
+* Navegador web moderno
 
-> 💡 Opcionalmente puedes instalar [Poetry](https://python-poetry.org/) o [pipenv] para gestionar el entorno.
+Opcional:
 
----
-
-## 🚀 Montar el proyecto en otra máquina
-
-1. **Clona el repositorio** (o copia la carpeta) y entra en él:
-   ```bash
-   git clone https://github.com/burggos/inventario_solterito.git
-   cd inventario_solterito
-   ```
-
-2. **Configura un entorno virtual** e instálalo:
-   ```bash
-   python3 -m venv venv             # crea el virtualenv
-   source venv/bin/activate         # Linux/macOS
-   # venv\Scripts\activate       # Windows
-
-   pip install -r requirements.txt  # instala dependencias
-   ```
-   > Si no existe `requirements.txt`, instala manualmente `django pillow` y luego ejecuta `pip freeze > requirements.txt`.
-
-3. **Variables de entorno y ajustes**
-   - copia el archivo de ejemplo `settings.py` si requieres diferenciar entornos.
-   - Opcional: define `DATABASE_URL` o edita `DATABASES` en `settings.py` para apuntar a PostgreSQL, MySQL, etc.
-   - Asegúrate de ajustar `ALLOWED_HOSTS` cuando salgas de `DEBUG`.
-
-4. **Aplica migraciones y crea usuario**
-   ```bash
-   python manage.py migrate
-   python manage.py createsuperuser
-   ```
-
-5. **Carga datos iniciales (opcional)**
-   Puedes ejecutar fixtures `python manage.py loaddata initial_data.json` si existe.
-
-6. **Ejecuta el servidor de desarrollo**
-   ```bash
-   python manage.py runserver
-   ```
-   Accede en `http://127.0.0.1:8000/`.
-
-7. **Pruebas**
-   ```bash
-   python manage.py test
-   ```
-   Se usa SQLite automáticamente en modo test (ver `settings.py`).
+* Herramientas de gestión de entornos como Poetry o Pipenv
 
 ---
 
-## 🗂 Estructura del proyecto
-```text
-inventario_solterito/
-├── manage.py              # script de administración
-├── requirements.txt
-├── db.sqlite3             # base de datos por defecto (cambia en producción)
-├── solterito_inventario/  # configuración de Django
-│   ├── settings.py
-│   ├── urls.py
-│   └── ...
-├── apps/                  # aplicaciones locales
-│   └── inventario/        # app principal
-│       ├── models.py
-│       ├── views.py
-│       ├── forms.py
-│       ├── tests.py       # pruebas unitarias
-│       └── ...
-├── static/                # recursos estáticos (CSS, JS, imágenes)
-├── media/                 # archivos subidos por usuarios
-└── templates/             # plantillas HTML
-    ├── base.html
-    └── inventario/
+## Instalación y ejecución
+
+### 1. Clonar el repositorio
+
+```bash
+git clone https://github.com/burggos/inventario_solterito.git
+cd inventario_solterito
+```
+
+### 2. Crear y activar entorno virtual
+
+```bash
+python3 -m venv venv
+
+# Linux / macOS
+source venv/bin/activate
+
+# Windows
+venv\Scripts\activate
+```
+
+### 3. Instalar dependencias
+
+```bash
+pip install -r requirements.txt
+```
+
+Si el archivo `requirements.txt` no existe:
+
+```bash
+pip install django pillow
+pip freeze > requirements.txt
 ```
 
 ---
 
-## ⚙️ Uso básico
+### 4. Configuración del proyecto
 
-1. Inicia sesión en el admin (`/admin`) con el superusuario.
-2. Crea algunas **Categorías** (e.g. Lácteos, Aseo).
-3. Agrega **Productos** con nombre, precio, stock, etc.
-4. Registra **Movimientos** (entradas/salidas) para llevar el historial.
-
-La web principal ya muestra listas filtrables de productos y reportes.
+* Revise el archivo `settings.py`
+* Configure la base de datos si no usará SQLite
+* Ajuste `ALLOWED_HOSTS` en entornos de producción
+* Configure variables de entorno si es necesario
 
 ---
 
-## 🛠️ Problemas comunes
+### 5. Aplicar migraciones
 
-- **`ImproperlyConfigured: settings.DATABASES...`** – Revisa `DATABASES`.
-- **`ALLOWED_HOSTS`/`DEBUG`** – cuando `DEBUG=False`, añade tus dominios a `ALLOWED_HOSTS`.
-- **`No installed app with label 'inventario'`** – añade `sys.path.append(str(BASE_DIR / 'apps'))` y `'inventario'` a `INSTALLED_APPS`.
-- **Imágenes no suben (/PIL)** – instala `Pillow` con `pip install pillow`.
-
----
-
-## 🧩 Contribuir
-
-1. Crea una rama para tu feature:
-   ```bash
-   git checkout -b feature/nombre
-   ```
-2. Trabaja y haz commits claros:
-   ```bash
-   git commit -am "Añade X"
-   ```
-3. Empuja y abre un pull request:
-   ```bash
-   git push origin feature/nombre
-   ```
-
-Revisa que todas las pruebas pasen y que el código siga el estilo del proyecto.
+```bash
+python manage.py migrate
+```
 
 ---
 
-## 📄 Licencia
-Proyecto con fines académicos para el Instituto Tecnológico San Agustín.
+### 6. Crear superusuario
+
+```bash
+python manage.py createsuperuser
+```
 
 ---
 
-Si necesitas ayuda adicional, contáctame o abre un issue en el repositorio. ¡Gracias por usar o contribuir!  
+### 7. (Opcional) Cargar datos iniciales
 
+```bash
+python manage.py loaddata initial_data.json
+```
+
+---
+
+### 8. Ejecutar el servidor
+
+```bash
+python manage.py runserver
+```
+
+Acceda desde:
+
+```
+http://127.0.0.1:8000/
+```
+
+---
+
+### 9. Ejecutar pruebas
+
+```bash
+python manage.py test
+```
+
+---
+
+## Estructura del proyecto
+
+```
+inventario_solterito/
+├── manage.py
+├── requirements.txt
+├── db.sqlite3
+├── solterito_inventario/
+│   ├── settings.py
+│   ├── urls.py
+│   └── ...
+├── apps/
+│   └── inventario/
+│       ├── models.py
+│       ├── views.py
+│       ├── forms.py
+│       ├── tests.py
+│       └── ...
+├── static/
+├── media/
+└── templates/
+```
+
+Descripción general:
+
+* `manage.py`: herramienta de administración de Django
+* `apps/inventario`: lógica principal del sistema
+* `static/`: archivos estáticos (CSS, JS, imágenes)
+* `media/`: archivos subidos por usuarios
+* `templates/`: vistas HTML
+
+---
+
+## Uso del sistema
+
+1. Acceda al panel administrativo en `/admin`
+2. Inicie sesión con el superusuario
+3. Cree categorías de productos
+4. Registre productos con su información (precio, stock, etc.)
+5. Gestione movimientos de inventario (entradas y salidas)
+
+El sistema incluye listados y reportes básicos de productos.
+
+---
+
+## Problemas comunes
+
+**Error de base de datos**
+
+* Verifique la configuración en `DATABASES` dentro de `settings.py`
+
+**Problemas con ALLOWED_HOSTS**
+
+* Asegúrese de definir los dominios cuando `DEBUG=False`
+
+**Aplicación no reconocida**
+
+* Confirme que `'inventario'` esté en `INSTALLED_APPS`
+
+**Problemas con imágenes**
+
+* Instale Pillow:
+
+```bash
+pip install pillow
+```
+
+---
+
+## Contribución
+
+1. Crear una nueva rama:
+
+```bash
+git checkout -b feature/nueva-funcionalidad
+```
+
+2. Realizar cambios y commits:
+
+```bash
+git commit -m "Descripción clara del cambio"
+```
+
+3. Subir cambios:
+
+```bash
+git push origin feature/nueva-funcionalidad
+```
+
+4. Abrir un Pull Request
+
+---
+
+## Licencia
+
+Proyecto desarrollado con fines académicos para el Instituto Tecnológico San Agustín.
+
+---
+
+## Soporte
+
+Para reportar errores o solicitar mejoras, utilice la sección de *issues* del repositorio.
