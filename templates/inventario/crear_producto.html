@@ -4,17 +4,20 @@
 {% block title %}Nuevo Producto - El Solterito{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8 max-w-screen-sm">
-    <h1 class="text-3xl font-bold text-teal-800 mb-6">Agregar Nuevo Producto</h1>
+<div class="container mx-auto px-4 py-8 max-w-2xl">
+    <div class="mb-8">
+        <h1 class="text-4xl font-bold text-teal-800 dark:text-teal-400 mb-2">Agregar Nuevo Producto</h1>
+        <p class="text-gray-600 dark:text-gray-400">Completa el formulario para crear un nuevo producto</p>
+    </div>
 
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 border-t-4 border-teal-500">
         <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
             
             <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
                 {% for field in form %}
                 <div class="w-full {% if field.name == 'descripcion' %}md:col-span-2{% endif %}">
-                    <label for="{{ field.id_for_label }}" class="block text-gray-700 dark:text-gray-300 font-medium mb-2">
+                    <label for="{{ field.id_for_label }}" class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">
                         {{ field.label }}{% if field.field.required %} <span class="text-red-500">*</span>{% endif %}
                     </label>
                     {% if field.name == 'descripcion' %}
@@ -32,7 +35,7 @@
                 {% endfor %}
             </div>
 
-            <div class="mt-6 flex flex-col sm:flex-row sm:space-x-3 space-y-3 sm:space-y-0">
+            <div class="mt-8 flex flex-col sm:flex-row sm:space-x-3 space-y-3 sm:space-y-0">
                 <button type="submit" class="btn-primary">
                     Guardar producto
                 </button>

@@ -1,6 +1,10 @@
+from datetime import timedelta
+
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
 
 # Import using the app name rather than the package path to avoid
 # "model not in INSTALLED_APPS" errors when the package sits under
@@ -135,3 +139,146 @@ class ProductoViewTests(TestCase):
         # debería redirigir al detalle del producto
         self.assertEqual(resp.status_code, 302)
         self.assertTrue(Producto.objects.filter(nombre='Pan').exists())
+
+
+class NoError500ViewTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.user = User.objects.create_user(username='tester', password='pass')
+        view_producto_perm = Permission.objects.get(codename='view_producto')
+        self.user.user_permissions.add(view_producto_perm)
+        self.client.login(username='tester', password='pass')
+
+        self.cat = Categoria.objects.create(nombre='Prueba')
+        self.producto = Producto.objects.create(
+            nombre='Leche',
+            categoria=self.cat,
+            precio=3.20,
+            stock=10,
+            stock_minimo=2,
+        )
+        self.producto_sin_mov = Producto.objects.create(
+            nombre='Pan',
+            categoria=self.cat,
+            precio=1.20,
+            stock=5,
+            stock_minimo=1,
+        )
+        self.movimiento = Movimiento.objects.create(
+            producto=self.producto,
+            tipo='entrada',
+            cantidad=3,
+        )
+
+    def assertNot500(self, response, url):
+        self.assertNotEqual(
+            response.status_code,
+            500,
+            f'Error 500 en la vista {url}',
+        )
+
+    def test_get_views_do_not_return_500(self):
+        urls = [
+            reverse('inventario:lista_productos'),
+            reverse('inventario:detalle_producto', args=[self.producto.pk]),
+            reverse('inventario:crear_producto'),
+            reverse('inventario:editar_producto', args=[self.producto.pk]),
+            reverse('inventario:eliminar_producto', args=[self.producto_sin_mov.pk]),
+            reverse('inventario:lista_movimientos'),
+            reverse('inventario:crear_movimiento'),
+            reverse('inventario:reportes'),
+        ]
+
+        for url in urls:
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertNot500(response, url)
+
+    def test_get_lista_productos_with_filters_does_not_return_500(self):
+        url = reverse('inventario:lista_productos') + '?q=Leche&categoria={}&stock_bajo=on&page=1'.format(self.cat.pk)
+        response = self.client.get(url)
+        self.assertNot500(response, url)
+
+    def test_get_crear_movimiento_with_initial_product_does_not_return_500(self):
+        url = reverse('inventario:crear_movimiento') + '?producto={}'.format(self.producto.pk)
+        response = self.client.get(url)
+        self.assertNot500(response, url)
+
+    def test_get_reportes_with_date_range_does_not_return_500(self):
+        hoy = timezone.now().date()
+        desde = hoy - timedelta(days=7)
+        url = reverse('inventario:reportes') + f'?desde={desde}&hasta={hoy}'
+        response = self.client.get(url)
+        self.assertNot500(response, url)
+        self.assertContains(response, 'Dashboard de Reportes')
+
+    def test_post_crear_producto_invalid_does_not_return_500(self):
+        data = {
+            'nombre': '',
+            'categoria': '',
+            'precio': '-1',
+            'stock': '-5',
+            'stock_minimo': '10',
+        }
+        response = self.client.post(reverse('inventario:crear_producto'), data)
+        self.assertNot500(response, reverse('inventario:crear_producto'))
+        self.assertEqual(response.status_code, 200)
+        self.assertFormError(response, 'form', 'nombre', ['Este campo es obligatorio.'])
+
+    def test_post_crear_movimiento_invalid_stock_does_not_return_500(self):
+        data = {
+            'producto': self.producto.pk,
+            'tipo': 'salida',
+            'cantidad': '999',
+            'descripcion': 'Salida mayor al stock',
+        }
+        response = self.client.post(reverse('inventario:crear_movimiento'), data)
+        self.assertNot500(response, reverse('inventario:crear_movimiento'))
+        self.assertEqual(response.status_code, 200)
+        self.assertFormError(response, 'form', None, 'Stock insuficiente. Stock actual: {}'.format(self.producto.stock))
+
+    def test_post_editar_producto_does_not_return_500(self):
+        data = {
+            'nombre': 'Leche Actualizada',
+            'categoria': self.cat.pk,
+            'precio': '4.00',
+            'stock': '8',
+            'stock_minimo': '2',
+        }
+        response = self.client.post(reverse('inventario:editar_producto', args=[self.producto.pk]), data)
+        self.assertNot500(response, reverse('inventario:editar_producto', args=[self.producto.pk]))
+        self.assertEqual(response.status_code, 302)
+        self.producto.refresh_from_db()
+        self.assertEqual(self.producto.nombre, 'Leche Actualizada')
+
+    def test_post_editar_producto_invalid_does_not_return_500(self):
+        data = {
+            'nombre': '',
+            'categoria': self.cat.pk,
+            'precio': '-2.00',
+            'stock': '2',
+            'stock_minimo': '1',
+        }
+        response = self.client.post(reverse('inventario:editar_producto', args=[self.producto.pk]), data)
+        self.assertNot500(response, reverse('inventario:editar_producto', args=[self.producto.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertFormError(response, 'form', 'nombre', ['Este campo es obligatorio.'])
+
+    def test_post_eliminar_producto_with_movimientos_does_not_return_500(self):
+        response = self.client.post(reverse('inventario:eliminar_producto', args=[self.producto.pk]))
+        self.assertNot500(response, reverse('inventario:eliminar_producto', args=[self.producto.pk]))
+        self.assertEqual(response.status_code, 302)
+
+    def test_post_crear_movimiento_does_not_return_500(self):
+        data = {
+            'producto': self.producto.pk,
+            'tipo': 'entrada',
+            'cantidad': '2',
+            'descripcion': 'Ingreso de prueba',
+        }
+        response = self.client.post(reverse('inventario:crear_movimiento'), data)
+        self.assertNot500(response, reverse('inventario:crear_movimiento'))
+
+    def test_post_eliminar_producto_does_not_return_500(self):
+        response = self.client.post(reverse('inventario:eliminar_producto', args=[self.producto_sin_mov.pk]))
+        self.assertNot500(response, reverse('inventario:eliminar_producto', args=[self.producto_sin_mov.pk]))

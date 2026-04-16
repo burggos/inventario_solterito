@@ -17,6 +17,9 @@ SECRET_KEY = 'j0)6hp%=z0+y6e^t5ip#h@#$jnfy+kd#2d^v%=dg4t3u0h2s2#'
 DEBUG = True
 ALLOWED_HOSTS = [
     '127.0.0.1',
+    'localhost',
+    '0.0.0.0',
+    'testserver',
 ]
 
 INSTALLED_APPS = [
@@ -60,23 +63,26 @@ TEMPLATES = [
 WSGI_APPLICATION = 'solterito_inventario.wsgi.application'
 
 # Base de datos
-# Use PostgreSQL by default, but switch to SQLite when running tests
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'solterito_db',
-        'USER': 'solterito_user',
-        'PASSWORD': '04243250145',
-        'HOST': 'localhost',
-        'PORT': '5432',
+# Use SQLite for development, PostgreSQL for production
+if 'test' in sys.argv or DEBUG:
+    # Use SQLite for development and testing
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
-
-# sqlite simplifies tests when the postgres user lacks CREATE DATABASE privileges
-if 'test' in sys.argv:
-    DATABASES['default'] = {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'test.sqlite3',
+else:
+    # Use PostgreSQL for production
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': 'solterito_db',
+            'USER': 'solterito_user',
+            'PASSWORD': '04243250145',
+            'HOST': 'localhost',
+            'PORT': '5432',
+        }
     }
 
 AUTH_PASSWORD_VALIDATORS = [

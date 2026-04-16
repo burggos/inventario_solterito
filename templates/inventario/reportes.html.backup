@@ -1,0 +1,302 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Reportes - El Solterito{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold text-teal-800 dark:text-teal-400 mb-6">Panel de Reportes</h1>
+
+    <div class="bg-white dark:bg-gray-900 rounded-lg shadow p-6 mb-8">
+        <form method="get" class="grid gap-4 md:grid-cols-3 items-end">
+            <div>
+                <label for="desde" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Desde</label>
+                <input id="desde" name="desde" type="date" value="{{ fecha_desde }}" class="mt-1 block w-full rounded-md border-gray-200 bg-white text-gray-900 shadow-sm focus:border-teal-500 focus:ring-teal-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" />
+            </div>
+            <div>
+                <label for="hasta" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Hasta</label>
+                <input id="hasta" name="hasta" type="date" value="{{ fecha_hasta }}" class="mt-1 block w-full rounded-md border-gray-200 bg-white text-gray-900 shadow-sm focus:border-teal-500 focus:ring-teal-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" />
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="submit" class="inline-flex items-center justify-center rounded-md bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-teal-700">Aplicar filtro</button>
+                <a href="{% url 'inventario:reportes' %}" class="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">Limpiar</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="card">
+            <h3 class="text-gray-500 dark:text-gray-400 text-sm uppercase">Total Productos</h3>
+            <p class="text-3xl font-bold text-teal-600 dark:text-teal-400">{{ total_productos }}</p>
+        </div>
+        <div class="card">
+            <h3 class="text-gray-500 dark:text-gray-400 text-sm uppercase">Valor Inventario</h3>
+            <p class="text-3xl font-bold text-teal-600 dark:text-teal-400">COP {{ valor_inventario|floatformat:0 }}</p>
+        </div>
+        <div class="card">
+            <h3 class="text-gray-500 dark:text-gray-400 text-sm uppercase">Stock Bajo</h3>
+            <p class="text-3xl font-bold text-red-600 dark:text-red-400">{{ productos_stock_bajo }}</p>
+        </div>
+        <div class="card">
+            <h3 class="text-gray-500 dark:text-gray-400 text-sm uppercase">Movimientos Hoy</h3>
+            <p class="text-3xl font-bold text-teal-600 dark:text-teal-400">{{ movimientos_hoy }}</p>
+        </div>
+        <div class="card">
+            <h3 class="text-gray-500 dark:text-gray-400 text-sm uppercase">Movimientos en rango</h3>
+            <p class="text-3xl font-bold text-teal-600 dark:text-teal-400">{{ total_movimientos_rango }}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">{{ rango_label }}</p>
+        </div>
+        <div class="card">
+            <h3 class="text-gray-500 dark:text-gray-400 text-sm uppercase">Entradas en rango</h3>
+            <p class="text-3xl font-bold text-green-600 dark:text-green-400">{{ total_entradas_rango }}</p>
+        </div>
+        <div class="card">
+            <h3 class="text-gray-500 dark:text-gray-400 text-sm uppercase">Salidas en rango</h3>
+            <p class="text-3xl font-bold text-red-600 dark:text-red-400">{{ total_salidas_rango }}</p>
+        </div>
+    </div>
+
+    <div class="card mb-8">
+        <h2 class="text-xl font-bold mb-4 dark:text-gray-200">Resumen del rango</h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead class="bg-gray-100 dark:bg-gray-700">
+                    <tr>
+                        <th class="table-header">Rango</th>
+                        <th class="table-header">Movimientos</th>
+                        <th class="table-header">Entradas</th>
+                        <th class="table-header">Salidas</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="border-t">
+                        <td class="px-4 py-2 dark:text-gray-200">{{ rango_label }}</td>
+                        <td class="px-4 py-2">{{ total_movimientos_rango }}</td>
+                        <td class="px-4 py-2">{{ total_entradas_rango }}</td>
+                        <td class="px-4 py-2">{{ total_salidas_rango }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Gráfico de movimientos mensuales -->
+    <div class="card mb-8">
+        <h2 class="text-xl font-bold mb-4 dark:text-gray-200">Movimientos por Mes</h2>
+        <canvas id="movimientosChart" height="100"></canvas>
+    </div>
+    <div class="card mb-8">
+        <h2 class="text-xl font-bold mb-4 dark:text-gray-200">Movimientos por Mes - Detalle</h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead class="bg-gray-100 dark:bg-gray-700">
+                    <tr>
+                        <th class="table-header">Mes</th>
+                        <th class="table-header">Entradas</th>
+                        <th class="table-header">Barra entradas</th>
+                        <th class="table-header">Salidas</th>
+                        <th class="table-header">Barra salidas</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in movimientos_por_mes %}
+                    <tr class="border-t dark:border-gray-600">
+                        <td class="px-4 py-2 dark:text-gray-200">{{ item.mes }}</td>
+                        <td class="px-4 py-2">{{ item.entradas }}</td>
+                        <td class="px-4 py-2">
+                            <div class="h-4 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                                <div class="h-full rounded-full bg-teal-500" style="width: {{ item.entradas_pct }}%"></div>
+                            </div>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">{{ item.entradas_pct }}%</span>
+                        </td>
+                        <td class="px-4 py-2">{{ item.salidas }}</td>
+                        <td class="px-4 py-2">
+                            <div class="h-4 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                                <div class="h-full rounded-full bg-red-500" style="width: {{ item.salidas_pct }}%"></div>
+                            </div>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">{{ item.salidas_pct }}%</span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-4 py-2 text-center text-gray-500 dark:text-gray-400">No hay datos de movimientos</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Tabla de productos más vendidos -->
+    <div class="card mb-8">
+        <h2 class="text-xl font-bold mb-4 dark:text-gray-200">Productos más vendidos</h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead class="bg-gray-100 dark:bg-gray-700">
+                    <tr>
+                        <th class="table-header">Producto</th>
+                        <th class="table-header">Categoría</th>
+                        <th class="table-header">Total vendido</th>
+                        <th class="table-header">Proporción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for producto in productos_mas_vendidos %}
+                    <tr class="border-t">
+                        <td class="px-4 py-2">
+                            <a href="{% url 'inventario:detalle_producto' producto.pk %}" class="text-teal-600 hover:underline">
+                                {{ producto.nombre }}
+                            </a>
+                        </td>
+                        <td class="px-4 py-2">{{ producto.categoria.nombre|default:"-" }}</td>
+                        <td class="px-4 py-2">{{ producto.total_vendido|default:0 }} unidades</td>
+                        <td class="px-4 py-2">
+                            <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                                <div class="h-full rounded-full bg-teal-500" style="width: {{ producto.porcentaje_vendido }}%"></div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="px-4 py-2 text-center text-gray-500">No hay datos de ventas</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Tabla de productos con stock crítico -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <h2 class="text-xl font-bold mb-4 dark:text-gray-200">Productos con stock bajo</h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead class="bg-gray-100 dark:bg-gray-700">
+                    <tr>
+                        <th class="px-4 py-2 text-left dark:text-gray-200">Producto</th>
+                        <th class="px-4 py-2 text-left dark:text-gray-200">Stock actual</th>
+                        <th class="px-4 py-2 text-left dark:text-gray-200">Stock mínimo</th>
+                        <th class="px-4 py-2 text-left dark:text-gray-200">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for producto in productos_criticos %}
+                    <tr class="border-t dark:border-gray-600">
+                        <td class="px-4 py-2 dark:text-gray-200">{{ producto.nombre }}</td>
+                        <td class="px-4 py-2 text-red-600 dark:text-red-400 font-bold">{{ producto.stock }}</td>
+                        <td class="px-4 py-2 dark:text-gray-200">{{ producto.stock_minimo }}</td>
+                        <td class="px-4 py-2">
+                            <a href="{% url 'inventario:crear_movimiento' %}?producto={{ producto.pk }}" class="text-teal-600 dark:text-teal-400 hover:underline">
+                                + Registrar entrada
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="px-4 py-2 text-center text-gray-500 dark:text-gray-400">No hay productos con stock bajo</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Script para el gráfico con Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('movimientosChart').getContext('2d');
+        
+        // Preparar datos desde el contexto de Django
+        const movimientos = {{ movimientos_por_mes|safe }};
+        
+        const labels = movimientos.map(item => item.mes);
+        const entradas = movimientos.map(item => item.entradas);
+        const salidas = movimientos.map(item => item.salidas);
+        
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Entradas',
+                        data: entradas,
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Salidas',
+                        data: salidas,
+                        backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Movimientos por mes',
+                        color: '#0f766e',
+                        font: {
+                            size: 16,
+                            weight: '600'
+                        }
+                    },
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            color: '#334155',
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.parsed.y + ' unidades';
+                            }
+                        }
+                    }
+                },
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Mes',
+                            color: '#334155',
+                            font: { size: 12 }
+                        },
+                        ticks: {
+                            color: '#334155'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Cantidad',
+                            color: '#334155',
+                            font: { size: 12 }
+                        },
+                        ticks: {
+                            stepSize: 1,
+                            color: '#334155'
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

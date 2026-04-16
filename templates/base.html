@@ -202,7 +202,7 @@
             toast.innerHTML = `
                 <div class="flex items-center">
                     <span class="mr-2">
-                        ${type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️'}
+                        ${type === 'success' ? '[OK]' : type === 'error' ? '[ERROR]' : type === 'warning' ? '[WARN]' : '[INFO]'}
                     </span>
                     <span>${message}</span>
                 </div>

@@ -5,94 +5,216 @@
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
-    <h1 class="text-3xl font-bold text-teal-800 dark:text-teal-400 mb-6">Panel de Reportes</h1>
+    <div class="mb-8">
+        <h1 class="text-4xl font-bold text-teal-800 dark:text-teal-400 mb-2"> Dashboard de Reportes</h1>
+        <p class="text-gray-600 dark:text-gray-400">Visión general del inventario y movimientos en tiempo real</p>
+    </div>
 
+    <!-- Filtro por rango de fechas -->
+    <div class="bg-white dark:bg-gray-900 rounded-lg shadow p-6 mb-8 border-l-4 border-teal-500">
+        <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4"> Filtrar por período</h2>
+        <form method="get" class="grid gap-4 md:grid-cols-5 items-end">
+            <div>
+                <label for="desde" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Desde</label>
+                <input id="desde" name="desde" type="date" value="{{ fecha_desde }}" class="mt-1 block w-full rounded-md border-gray-200 bg-white text-gray-900 shadow-sm focus:border-teal-500 focus:ring-teal-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" />
+            </div>
+            <div>
+                <label for="hasta" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Hasta</label>
+                <input id="hasta" name="hasta" type="date" value="{{ fecha_hasta }}" class="mt-1 block w-full rounded-md border-gray-200 bg-white text-gray-900 shadow-sm focus:border-teal-500 focus:ring-teal-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" />
+            </div>
+            <div>
+                <label for="grouping" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Agrupar por</label>
+                <select id="grouping" name="grouping" class="mt-1 block w-full rounded-md border-gray-200 bg-white text-gray-900 shadow-sm focus:border-teal-500 focus:ring-teal-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100">
+                    <option value="dia" {% if grouping == 'dia' %}selected{% endif %}>Día</option>
+                    <option value="semana" {% if grouping == 'semana' %}selected{% endif %}>Semana</option>
+                    <option value="mes" {% if grouping == 'mes' %}selected{% endif %}>Mes</option>
+                    <option value="ano" {% if grouping == 'ano' %}selected{% endif %}>Año</option>
+                </select>
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="submit" class="inline-flex items-center justify-center rounded-md bg-teal-600 px-6 py-2 text-sm font-semibold text-white shadow hover:bg-teal-700 transition">Aplicar filtro</button>
+                <a href="{% url 'inventario:reportes' %}" class="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 transition">Limpiar</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- KPIs Principales -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div class="card">
-            <h3 class="text-gray-500 dark:text-gray-400 text-sm uppercase">Total Productos</h3>
-            <p class="text-3xl font-bold text-teal-600 dark:text-teal-400">{{ total_productos }}</p>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border-t-4 border-teal-500 hover:shadow-lg transition">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm uppercase font-semibold">Total Productos</p>
+                    <p class="text-4xl font-bold text-teal-600 dark:text-teal-400 mt-2">{{ total_productos }}</p>
+                </div>
+                <div class="text-5xl text-teal-200 dark:text-teal-900"></div>
+            </div>
         </div>
-        <div class="card">
-            <h3 class="text-gray-500 dark:text-gray-400 text-sm uppercase">Valor Inventario</h3>
-            <p class="text-3xl font-bold text-teal-600 dark:text-teal-400">${{ valor_inventario|floatformat:0 }}</p>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border-t-4 border-blue-500 hover:shadow-lg transition">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm uppercase font-semibold">Valor Inventario</p>
+                    <p class="text-3xl font-bold text-blue-600 dark:text-blue-400 mt-2">COP {{ valor_inventario|floatformat:0 }}</p>
+                </div>
+                <div class="text-5xl text-blue-200 dark:text-blue-900"></div>
+            </div>
         </div>
-        <div class="card">
-            <h3 class="text-gray-500 dark:text-gray-400 text-sm uppercase">Stock Bajo</h3>
-            <p class="text-3xl font-bold text-red-600 dark:text-red-400">{{ productos_stock_bajo }}</p>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border-t-4 border-orange-500 hover:shadow-lg transition">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm uppercase font-semibold">Stock Bajo</p>
+                    <p class="text-4xl font-bold text-orange-600 dark:text-orange-400 mt-2">{{ productos_stock_bajo }}</p>
+                    <p class="text-xs text-orange-500 mt-1">Requiere atención</p>
+                </div>
+                <div class="text-5xl text-orange-200 dark:text-orange-900"></div>
+            </div>
         </div>
-        <div class="card">
-            <h3 class="text-gray-500 dark:text-gray-400 text-sm uppercase">Movimientos Hoy</h3>
-            <p class="text-3xl font-bold text-teal-600 dark:text-teal-400">{{ movimientos_hoy }}</p>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border-t-4 border-green-500 hover:shadow-lg transition">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm uppercase font-semibold">Movimientos Hoy</p>
+                    <p class="text-4xl font-bold text-green-600 dark:text-green-400 mt-2">{{ movimientos_hoy }}</p>
+                    <p class="text-xs text-green-500 mt-1">Actividad actual</p>
+                </div>
+                <div class="text-5xl text-green-200 dark:text-green-900"></div>
+            </div>
         </div>
     </div>
 
-    <!-- Gráfico de movimientos mensuales -->
-    <div class="card mb-8">
-        <h2 class="text-xl font-bold mb-4 dark:text-gray-200">Movimientos por Mes</h2>
-        <canvas id="movimientosChart" height="100"></canvas>
+    <!-- Sección de Alertas y Resumen del Rango en Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <!-- Tabla de Alertas: Stock Crítico -->
+        <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200">Productos con Stock Crítico</h2>
+                <span class="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 text-sm font-bold px-3 py-1 rounded-full">{{ productos_stock_bajo }} críticos</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-red-50 dark:bg-red-900 dark:bg-opacity-30 border-b-2 border-red-200 dark:border-red-700">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-sm font-bold text-red-800 dark:text-red-200">Producto</th>
+                            <th class="px-4 py-3 text-left text-sm font-bold text-red-800 dark:text-red-200">Stock Actual</th>
+                            <th class="px-4 py-3 text-left text-sm font-bold text-red-800 dark:text-red-200">Stock Mínimo</th>
+                            <th class="px-4 py-3 text-left text-sm font-bold text-red-800 dark:text-red-200">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for producto in productos_criticos %}
+                        <tr class="border-t dark:border-gray-700 hover:bg-red-50 dark:hover:bg-gray-700 transition">
+                            <td class="px-4 py-3 font-semibold text-gray-900 dark:text-gray-100">{{ producto.nombre }}</td>
+                            <td class="px-4 py-3"><span class="inline-flex items-center justify-center bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 font-bold rounded px-2 py-1">{{ producto.stock }}</span></td>
+                            <td class="px-4 py-3 text-gray-600 dark:text-gray-400">{{ producto.stock_minimo }}</td>
+                            <td class="px-4 py-3">
+                                <a href="{% url 'inventario:crear_movimiento' %}?producto={{ producto.pk }}" class="inline-flex items-center px-3 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 dark:bg-teal-700 dark:hover:bg-teal-600 text-xs font-bold transition">+ Entrada</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400 italic">Todo el inventario está en orden</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Resumen del rango -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border-l-4 border-teal-500">
+            <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200 mb-6">Resumen del Período</h3>
+            <div class="space-y-4">
+                <div class="p-4 bg-teal-50 dark:bg-teal-900 dark:bg-opacity-30 rounded-lg border border-teal-200 dark:border-teal-700">
+                    <p class="text-xs text-teal-600 dark:text-teal-400 uppercase font-bold tracking-wide">Rango Seleccionado</p>
+                    <p class="text-lg font-bold text-teal-800 dark:text-teal-200 mt-2">{{ rango_label }}</p>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="p-4 bg-indigo-50 dark:bg-indigo-900 dark:bg-opacity-30 rounded-lg border border-indigo-200 dark:border-indigo-700">
+                        <p class="text-xs text-indigo-600 dark:text-indigo-400 uppercase font-bold tracking-wide">Total Movimientos</p>
+                        <p class="text-3xl font-bold text-indigo-700 dark:text-indigo-300 mt-2">{{ total_movimientos_rango }}</p>
+                    </div>
+                    <div class="p-4 bg-emerald-50 dark:bg-emerald-900 dark:bg-opacity-30 rounded-lg border border-emerald-200 dark:border-emerald-700">
+                        <p class="text-xs text-emerald-600 dark:text-emerald-400 uppercase font-bold tracking-wide">Entradas</p>
+                        <p class="text-3xl font-bold text-emerald-700 dark:text-emerald-300 mt-2">{{ total_entradas_rango }}</p>
+                    </div>
+                    <div class="p-4 bg-rose-50 dark:bg-rose-900 dark:bg-opacity-30 rounded-lg border border-rose-200 dark:border-rose-700 col-span-2">
+                        <p class="text-xs text-rose-600 dark:text-rose-400 uppercase font-bold tracking-wide">Salidas</p>
+                        <p class="text-3xl font-bold text-rose-700 dark:text-rose-300 mt-2">{{ total_salidas_rango }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Tabla de productos más vendidos -->
-    <div class="card mb-8">
-        <h2 class="text-xl font-bold mb-4 dark:text-gray-200">Productos más vendidos</h2>
+    <!-- Análisis de Tendencias -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
+        <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200 mb-6">
+            Tendencia 
+            {% if grouping == 'semana' %}
+                Semanal
+            {% elif grouping == 'mes' %}
+                Mensual
+            {% elif grouping == 'ano' %}
+                Anual
+            {% else %}
+                Diaria
+            {% endif %}
+            de Movimientos
+        </h2>
+        <div class="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-lg p-4">
+            <canvas id="movimientosChart" height="80"></canvas>
+        </div>
+    </div>
+
+    <!-- Distribución de Productos Vendidos -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
+        <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200 mb-6">
+            Distribución de Ventas por Producto
+        </h2>
+        <div class="flex justify-center">
+            <div class="w-full max-w-md bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-lg p-6">
+                <canvas id="productosDistribucionChart" height="80"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Productos Más Vendidos -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
+        <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200 mb-6">Productos Más Vendidos</h2>
         <div class="overflow-x-auto">
-            <table class="min-w-full">
-                <thead class="bg-gray-100 dark:bg-gray-700">
+            <table class="min-w-full text-sm">
+                <thead class="bg-amber-50 dark:bg-amber-900 dark:bg-opacity-30 border-b-2 border-amber-200 dark:border-amber-700">
                     <tr>
-                        <th class="table-header">Producto</th>
-                        <th class="table-header">Categoría</th>
-                        <th class="table-header">Total vendido</th>
+                        <th class="px-4 py-3 text-center text-sm font-bold text-amber-800 dark:text-amber-200 w-12">Pos</th>
+                        <th class="px-4 py-3 text-left text-sm font-bold text-amber-800 dark:text-amber-200">Producto</th>
+                        <th class="px-4 py-3 text-left text-sm font-bold text-amber-800 dark:text-amber-200">Categoría</th>
+                        <th class="px-4 py-3 text-center text-sm font-bold text-amber-800 dark:text-amber-200">Vendidas</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for producto in productos_mas_vendidos %}
-                    <tr class="border-t">
-                        <td class="px-4 py-2">
-                            <a href="{% url 'inventario:detalle_producto' producto.pk %}" class="text-teal-600 hover:underline">
-                                {{ producto.nombre }}
-                            </a>
+                    <tr class="border-t dark:border-gray-700 hover:bg-amber-50 dark:hover:bg-gray-700 transition">
+                        <td class="px-4 py-3 text-center">
+                            {% if forloop.counter == 1 %}
+                                <span class="text-3xl"></span>
+                            {% elif forloop.counter == 2 %}
+                                <span class="text-3xl"></span>
+                            {% elif forloop.counter == 3 %}
+                                <span class="text-3xl"></span>
+                            {% else %}
+                                <span class="inline-flex items-center justify-center bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold rounded-full w-7 h-7 text-sm">#{{ forloop.counter }}</span>
+                            {% endif %}
                         </td>
-                        <td class="px-4 py-2">{{ producto.categoria.nombre|default:"-" }}</td>
-                        <td class="px-4 py-2">{{ producto.total_vendido|default:0 }} unidades</td>
+                        <td class="px-4 py-3">
+                            <a href="{% url 'inventario:detalle_producto' producto.pk %}" class="text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 font-bold transition">{{ producto.nombre }}</a>
+                        </td>
+                        <td class="px-4 py-3 text-gray-600 dark:text-gray-400">{{ producto.categoria.nombre|default:"-" }}</td>
+                        <td class="px-4 py-3 text-center"><span class="inline-flex items-center justify-center bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 font-bold rounded px-3 py-1">{{ producto.total_vendido|default:0 }}</span></td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="3" class="px-4 py-2 text-center text-gray-500">No hay datos de ventas</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Tabla de productos con stock crítico -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <h2 class="text-xl font-bold mb-4 dark:text-gray-200">Productos con stock bajo</h2>
-        <div class="overflow-x-auto">
-            <table class="min-w-full">
-                <thead class="bg-gray-100 dark:bg-gray-700">
-                    <tr>
-                        <th class="px-4 py-2 text-left dark:text-gray-200">Producto</th>
-                        <th class="px-4 py-2 text-left dark:text-gray-200">Stock actual</th>
-                        <th class="px-4 py-2 text-left dark:text-gray-200">Stock mínimo</th>
-                        <th class="px-4 py-2 text-left dark:text-gray-200">Acción</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for producto in productos_criticos %}
-                    <tr class="border-t dark:border-gray-600">
-                        <td class="px-4 py-2 dark:text-gray-200">{{ producto.nombre }}</td>
-                        <td class="px-4 py-2 text-red-600 dark:text-red-400 font-bold">{{ producto.stock }}</td>
-                        <td class="px-4 py-2 dark:text-gray-200">{{ producto.stock_minimo }}</td>
-                        <td class="px-4 py-2">
-                            <a href="{% url 'inventario:crear_movimiento' %}?producto={{ producto.pk }}" class="text-teal-600 dark:text-teal-400 hover:underline">
-                                + Registrar entrada
-                            </a>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="4" class="px-4 py-2 text-center text-gray-500 dark:text-gray-400">No hay productos con stock bajo</td>
+                        <td colspan="4" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400 italic">No hay datos de ventas disponibles</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -106,8 +228,6 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const ctx = document.getElementById('movimientosChart').getContext('2d');
-        
-        // Preparar datos desde el contexto de Django
         const movimientos = {{ movimientos_por_mes|safe }};
         
         const labels = movimientos.map(item => item.mes);
@@ -122,24 +242,157 @@
                     {
                         label: 'Entradas',
                         data: entradas,
-                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 1
+                        backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 2,
+                        borderRadius: 6
                     },
                     {
                         label: 'Salidas',
                         data: salidas,
-                        backgroundColor: 'rgba(255, 99, 132, 0.5)',
-                        borderColor: 'rgba(255, 99, 132, 1)',
-                        borderWidth: 1
+                        backgroundColor: 'rgba(239, 68, 68, 0.7)',
+                        borderColor: 'rgba(239, 68, 68, 1)',
+                        borderWidth: 2,
+                        borderRadius: 6
                     }
                 ]
             },
             options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            color: '#64748b',
+                            font: {
+                                size: 13,
+                                weight: '500'
+                            },
+                            padding: 15,
+                            usePointStyle: true
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: '#0f766e',
+                        borderWidth: 1,
+                        padding: 12,
+                        displayColors: true,
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.parsed.y + ' unidades';
+                            }
+                        }
+                    }
+                },
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
                 scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Día',
+                            color: '#64748b',
+                            font: { size: 13, weight: '500' }
+                        },
+                        ticks: {
+                            color: '#64748b',
+                            font: { size: 12 }
+                        },
+                        grid: {
+                            color: '#e2e8f0',
+                            drawBorder: false
+                        }
+                    },
                     y: {
                         beginAtZero: true,
-                        stepSize: 1
+                        title: {
+                            display: true,
+                            text: 'Movimientos',
+                            color: '#64748b',
+                            font: { size: 13, weight: '500' }
+                        },
+                        ticks: {
+                            stepSize: 1,
+                            color: '#64748b',
+                            font: { size: 12 }
+                        },
+                        grid: {
+                            color: '#e2e8f0',
+                            drawBorder: false
+                        }
+                    }
+                }
+            }
+        });
+
+        // Gráfico de Dónut - Distribución de Productos Vendidos
+        const ctxDonut = document.getElementById('productosDistribucionChart').getContext('2d');
+        const productosData = {{ productos_donut_json|safe }};
+        
+        const colores = [
+            'rgba(239, 68, 68, 0.8)',    // Rojo
+            'rgba(59, 130, 246, 0.8)',   // Azul
+            'rgba(34, 197, 94, 0.8)',    // Verde
+            'rgba(250, 204, 21, 0.8)',   // Amarillo
+            'rgba(139, 92, 246, 0.8)',   // Púrpura
+            'rgba(14, 165, 233, 0.8)',   // Cian
+            'rgba(248, 113, 113, 0.8)',  // Rojo claro
+            'rgba(251, 146, 60, 0.8)',   // Naranja
+            'rgba(168, 85, 247, 0.8)',   // Violeta
+            'rgba(6, 182, 212, 0.8)'     // Turquesa
+        ];
+
+        const bordeColores = colores.map(c => c.replace('0.8', '1'));
+
+        new Chart(ctxDonut, {
+            type: 'doughnut',
+            data: {
+                labels: productosData.map(p => p.nombre),
+                datasets: [{
+                    data: productosData.map(p => p.total_vendido),
+                    backgroundColor: colores.slice(0, productosData.length),
+                    borderColor: bordeColores.slice(0, productosData.length),
+                    borderWidth: 2,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            color: '#64748b',
+                            font: {
+                                size: 12,
+                                weight: '500'
+                            },
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: '#0f766e',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
+                            }
+                        }
                     }
                 }
             }

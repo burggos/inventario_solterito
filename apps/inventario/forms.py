@@ -21,7 +21,7 @@ class ProductoForm(forms.ModelForm):
             }),
             'precio': forms.NumberInput(attrs={
                 'class': 'mt-1 block w-full rounded-md border-gray-100 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400',
-                'placeholder': '0.00'
+                'placeholder': 'Ej. 10000 (COP)'
             }),
             'stock': forms.NumberInput(attrs={
                 'class': 'mt-1 block w-full rounded-md border-gray-100 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400',
