@@ -54,4 +54,74 @@ class MovimientoForm(forms.ModelForm):
         if tipo == 'salida' and producto and cantidad:
             if producto.stock < cantidad:
                 raise forms.ValidationError(f'Stock insuficiente. Stock actual: {producto.stock}')
-        return cleaned_data
+
+
+# ============================================================================
+# FORMULARIOS PARA VENTAS Y COMPRAS
+# ============================================================================
+
+from .models import Proveedor, OrdenCompra, DetalleCompra, Venta, DetalleVenta
+
+
+class ProveedorForm(forms.ModelForm):
+    class Meta:
+        model = Proveedor
+        fields = ['nombre', 'email', 'telefono', 'direccion', 'ciudad', 'ruc', 'contacto_principal', 'terminos_pago', 'activo']
+        widgets = {
+            'nombre': forms.TextInput(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white', 'placeholder': 'Nombre del proveedor'}),
+            'email': forms.EmailInput(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white', 'placeholder': 'correo@ejemplo.com'}),
+            'telefono': forms.TextInput(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white', 'placeholder': '+56912345678'}),
+            'direccion': forms.Textarea(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white', 'rows': 3}),
+            'ciudad': forms.TextInput(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white'}),
+            'ruc': forms.TextInput(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white'}),
+            'contacto_principal': forms.TextInput(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white'}),
+            'terminos_pago': forms.Textarea(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white', 'rows': 3}),
+            'activo': forms.CheckboxInput(attrs={'class': 'h-4 w-4'}),
+        }
+
+
+class OrdenCompraForm(forms.ModelForm):
+    class Meta:
+        model = OrdenCompra
+        fields = ['proveedor', 'fecha_entrega_esperada', 'estado', 'notas']
+        widgets = {
+            'proveedor': forms.Select(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white'}),
+            'fecha_entrega_esperada': forms.DateInput(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white', 'type': 'date'}),
+            'estado': forms.Select(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white'}),
+            'notas': forms.Textarea(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white', 'rows': 3}),
+        }
+
+
+class DetalleCompraForm(forms.ModelForm):
+    class Meta:
+        model = DetalleCompra
+        fields = ['producto', 'cantidad_solicitada', 'precio_unitario']
+        widgets = {
+            'producto': forms.Select(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white'}),
+            'cantidad_solicitada': forms.NumberInput(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white', 'min': '1'}),
+            'precio_unitario': forms.NumberInput(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white', 'step': '0.01'}),
+        }
+
+
+class VentaForm(forms.ModelForm):
+    class Meta:
+        model = Venta
+        fields = ['cliente_nombre', 'forma_pago', 'estado', 'notas']
+        widgets = {
+            'cliente_nombre': forms.TextInput(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white', 'placeholder': 'Nombre del cliente'}),
+            'forma_pago': forms.Select(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white'}),
+            'estado': forms.Select(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white'}),
+            'notas': forms.Textarea(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white', 'rows': 3}),
+        }
+
+
+class DetalleVentaForm(forms.ModelForm):
+    class Meta:
+        model = DetalleVenta
+        fields = ['producto', 'cantidad', 'precio_unitario', 'descuento_porcentaje']
+        widgets = {
+            'producto': forms.Select(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white'}),
+            'cantidad': forms.NumberInput(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white', 'min': '1'}),
+            'precio_unitario': forms.NumberInput(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white', 'step': '0.01'}),
+            'descuento_porcentaje': forms.NumberInput(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white', 'step': '0.01', 'min': '0'}),
+        }
