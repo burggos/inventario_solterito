@@ -2,22 +2,23 @@
 {% load static %}
 
 {% block title %}Nuevo Producto - El Solterito{% endblock %}
+{% block page_title %}Nuevo Producto{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8 max-w-2xl">
-    <div class="mb-8">
-        <h1 class="text-4xl font-bold text-teal-800 dark:text-teal-400 mb-2">Agregar Nuevo Producto</h1>
-        <p class="text-gray-600 dark:text-gray-400">Completa el formulario para crear un nuevo producto</p>
+<div class="max-w-2xl mx-auto">
+    <div class="mb-6">
+        <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Agregar Nuevo Producto</h2>
+        <p class="text-gray-500 dark:text-gray-400 mt-1">Completa el formulario para crear un nuevo producto</p>
     </div>
 
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 border-t-4 border-teal-500">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 border-t-4 border-t-teal-500 dark:border-t-teal-700 p-6">
         <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
             
             <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
                 {% for field in form %}
                 <div class="w-full {% if field.name == 'descripcion' %}md:col-span-2{% endif %}">
-                    <label for="{{ field.id_for_label }}" class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">
+                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         {{ field.label }}{% if field.field.required %} <span class="text-red-500">*</span>{% endif %}
                     </label>
                     {% if field.name == 'descripcion' %}

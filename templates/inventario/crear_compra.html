@@ -1,0 +1,180 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Nueva Compra - El Solterito{% endblock %}
+{% block page_title %}Nueva Compra{% endblock %}
+
+{% block content %}
+    <div class="mb-6">
+        <h2 class="page-title">Nueva Orden de Compra</h2>
+        <p class="page-subtitle">Registra una compra a proveedor</p>
+    </div>
+
+    <form method="post" id="compra-form" novalidate>
+        {% csrf_token %}
+
+        <!-- Datos del encabezado -->
+        <div class="card-accent p-6 mb-6">
+            <h2 class="section-title mb-4">Datos de la Orden</h2>
+            {% if form.errors %}
+            <div class="alert-danger mb-4">
+                <p class="font-semibold">{{ form.errors }}</p>
+            </div>
+            {% endif %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% for field in form %}
+                <div>
+                    <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}<p class="text-red-500 text-sm mt-1">{{ field.errors.0 }}</p>{% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Agregar ítems -->
+        <div class="card-accent card-accent-blue p-6 mb-6">
+            <h2 class="section-title mb-4">Ítems de la Compra</h2>
+
+            <!-- Buscador de productos -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div>
+                    <label class="form-label">Producto</label>
+                    <select id="add-producto" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500 dark:bg-gray-700 dark:text-gray-200">
+                        <option value="">Seleccionar producto...</option>
+                        {% for p in productos %}
+                            <option value="{{ p.id }}" data-precio="{{ p.precio }}" data-stock="{{ p.stock }}" data-nombre="{{ p.nombre }}">{{ p.nombre }} (Stock: {{ p.stock }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">Cantidad</label>
+                    <input type="number" id="add-cantidad" min="1" value="1" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500 dark:bg-gray-700 dark:text-gray-200">
+                </div>
+                <div>
+                    <label class="form-label">Precio Unitario</label>
+                    <input type="number" id="add-precio" step="0.01" min="0" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500 dark:bg-gray-700 dark:text-gray-200">
+                </div>
+                <div class="flex items-end">
+                    <button type="button" id="btn-agregar-item" class="btn-info w-full">
+                        + Agregar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tabla de ítems -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm" id="items-table">
+                    <thead class="table-header">
+                        <tr>
+                            <th>Producto</th>
+                            <th class="text-center">Cantidad</th>
+                            <th class="text-right">Precio Unit.</th>
+                            <th class="text-right">Subtotal</th>
+                            <th class="text-center">Quitar</th>
+                        </tr>
+                    </thead>
+                    <tbody id="items-body" class="divide-y divide-gray-100 dark:divide-gray-700">
+                        <!-- Items dinámicos se agregan aquí -->
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-footer border-t-2 border-gray-200 dark:border-gray-600">
+                            <td colspan="3" class="text-right text-gray-900 dark:text-gray-100">TOTAL:</td>
+                            <td class="text-right text-teal-600 dark:text-teal-400" id="total-display">COP 0</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <p id="no-items-msg" class="text-center text-gray-500 dark:text-gray-400 py-4">No hay ítems agregados. Use el formulario de arriba para agregar productos.</p>
+        </div>
+
+        <div class="mt-8 flex flex-col sm:flex-row sm:space-x-3 space-y-3 sm:space-y-0">
+            <button type="submit" id="btn-guardar" class="btn-primary text-lg flex-1" disabled>
+                Guardar Orden de Compra
+            </button>
+            <a href="{% url 'inventario:lista_compras' %}" class="btn-secondary">Cancelar</a>
+        </div>
+    </form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const itemsBody = document.getElementById('items-body');
+    const totalDisplay = document.getElementById('total-display');
+    const noItemsMsg = document.getElementById('no-items-msg');
+    const btnGuardar = document.getElementById('btn-guardar');
+    const productoSelect = document.getElementById('add-producto');
+    const cantidadInput = document.getElementById('add-cantidad');
+    const precioInput = document.getElementById('add-precio');
+    let itemCount = 0;
+
+    // Auto-fill price when product selected
+    productoSelect.addEventListener('change', function() {
+        const option = this.options[this.selectedIndex];
+        if (option.value) {
+            precioInput.value = option.dataset.precio || '';
+        }
+    });
+
+    document.getElementById('btn-agregar-item').addEventListener('click', function() {
+        const prodId = productoSelect.value;
+        const prodNombre = productoSelect.options[productoSelect.selectedIndex].dataset.nombre;
+        const cantidad = parseInt(cantidadInput.value);
+        const precio = parseFloat(precioInput.value);
+
+        if (!prodId || !cantidad || cantidad < 1 || !precio || precio < 0) {
+            alert('Complete todos los campos del ítem.');
+            return;
+        }
+
+        const subtotal = cantidad * precio;
+        itemCount++;
+
+        const row = document.createElement('tr');
+        row.className = 'table-row item-row';
+        row.innerHTML = `
+            <td class="px-4 py-3 text-gray-900 dark:text-gray-100">${prodNombre}
+                <input type="hidden" name="item_producto[]" value="${prodId}">
+            </td>
+            <td class="px-4 py-3 text-center text-gray-900 dark:text-gray-100">${cantidad}
+                <input type="hidden" name="item_cantidad[]" value="${cantidad}">
+            </td>
+            <td class="px-4 py-3 text-right text-gray-900 dark:text-gray-100">COP ${precio.toFixed(0)}
+                <input type="hidden" name="item_precio[]" value="${precio}">
+            </td>
+            <td class="px-4 py-3 text-right font-semibold text-gray-900 dark:text-gray-100">COP ${subtotal.toFixed(0)}</td>
+            <td class="px-4 py-3 text-center">
+                <button type="button" class="btn-remove text-red-600 hover:text-red-800 dark:text-red-400 font-bold text-lg">&times;</button>
+            </td>
+        `;
+        itemsBody.appendChild(row);
+        updateTotal();
+
+        // Reset inputs
+        productoSelect.value = '';
+        cantidadInput.value = 1;
+        precioInput.value = '';
+    });
+
+    itemsBody.addEventListener('click', function(e) {
+        if (e.target.classList.contains('btn-remove')) {
+            e.target.closest('tr').remove();
+            updateTotal();
+        }
+    });
+
+    function updateTotal() {
+        const rows = itemsBody.querySelectorAll('.item-row');
+        let total = 0;
+        rows.forEach(row => {
+            const cant = parseInt(row.querySelector('input[name="item_cantidad[]"]').value);
+            const precio = parseFloat(row.querySelector('input[name="item_precio[]"]').value);
+            total += cant * precio;
+        });
+        totalDisplay.textContent = `COP ${total.toFixed(0)}`;
+        noItemsMsg.style.display = rows.length > 0 ? 'none' : 'block';
+        btnGuardar.disabled = rows.length === 0;
+    }
+});
+</script>
+{% endblock %}

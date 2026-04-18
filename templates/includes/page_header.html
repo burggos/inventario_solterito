@@ -1,0 +1,24 @@
+{# 
+  Page Header — use at the top of every page
+  
+  Variables:
+    title       — Page heading text (required)
+    subtitle    — Description text below title (optional)
+    action_url  — URL for the primary action button (optional)
+    action_text — Text for the primary action button (optional)
+    action_class — CSS class for button, defaults to btn-primary (optional)
+#}
+<div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+        <h2 class="page-title">{{ title }}</h2>
+        {% if subtitle %}
+        <p class="page-subtitle">{{ subtitle }}</p>
+        {% endif %}
+    </div>
+    {% if action_url %}
+    <a href="{{ action_url }}" class="{{ action_class|default:'btn-primary' }}">
+        {% if action_icon %}<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ action_icon }}"/></svg>{% endif %}
+        {{ action_text }}
+    </a>
+    {% endif %}
+</div>

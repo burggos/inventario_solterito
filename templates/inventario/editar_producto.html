@@ -2,22 +2,33 @@
 {% load static %}
 
 {% block title %}Editar {{ producto.nombre }} - El Solterito{% endblock %}
+{% block page_title %}Editar Producto{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8 max-w-2xl">
-    <div class="mb-8">
-        <h1 class="text-4xl font-bold text-teal-800 dark:text-teal-400 mb-2">Editar Producto</h1>
-        <p class="text-gray-600 dark:text-gray-400">{{ producto.nombre }}</p>
+<div class="max-w-2xl mx-auto">
+    <div class="mb-6">
+        <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Editar Producto</h2>
+        <p class="text-gray-500 dark:text-gray-400 mt-1">{{ producto.nombre }}</p>
     </div>
 
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 border-t-4 border-teal-500">
+    <!-- Stock actual (solo lectura) -->
+    <div class="mb-6 flex items-center gap-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+        <div class="flex items-center gap-2">
+            <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+            <span class="text-sm font-medium text-gray-600 dark:text-gray-300">Stock actual:</span>
+            <span class="text-lg font-bold {% if producto.stock <= producto.stock_minimo %}text-red-600 dark:text-red-400{% else %}text-green-600 dark:text-green-400{% endif %}">{{ producto.stock }}</span>
+        </div>
+        <span class="text-xs text-gray-400 dark:text-gray-500">(El stock se gestiona desde Ventas, Compras o Ajustes de Inventario)</span>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 border-t-4 border-t-teal-500 dark:border-t-teal-700 p-6">
         <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {% for field in form %}
                 <div class="w-full {% if field.name == 'descripcion' %}md:col-span-2{% endif %}">
-                    <label for="{{ field.id_for_label }}" class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">
+                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         {{ field.label }}{% if field.field.required %} <span class="text-red-500">*</span>{% endif %}
                     </label>
                     {{ field }}
@@ -33,7 +44,7 @@
 
             {% if producto.imagen %}
             <div class="mt-6">
-                <p class="text-sm text-gray-600 dark:text-gray-400 font-semibold">Imagen actual:</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400 font-medium">Imagen actual:</p>
                 <img src="{{ producto.imagen.url }}" alt="{{ producto.nombre }}" class="mt-2 h-32 w-32 object-cover rounded">
             </div>
             {% endif %}

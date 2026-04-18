@@ -3,9 +3,20 @@ from .models import Movimiento, Producto
 from .models import Producto
 
 class ProductoForm(forms.ModelForm):
+    """Form for CREATING products. Includes stock_inicial which routes through Movimiento."""
+    stock_inicial = forms.IntegerField(
+        min_value=0, initial=0, required=False,
+        label='Stock inicial',
+        help_text='Se registrará como movimiento de entrada',
+        widget=forms.NumberInput(attrs={
+            'class': 'mt-1 block w-full rounded-md border-gray-100 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400',
+            'placeholder': '0'
+        }),
+    )
+
     class Meta:
         model = Producto
-        fields = ['nombre', 'descripcion', 'categoria', 'precio', 'stock', 'stock_minimo', 'imagen', 'codigo_barras']
+        fields = ['nombre', 'descripcion', 'categoria', 'precio', 'stock_minimo', 'imagen', 'codigo_barras']
         widgets = {
             'nombre': forms.TextInput(attrs={
                 'class': 'mt-1 block w-full rounded-md border-gray-100 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400',
@@ -41,9 +52,25 @@ class ProductoForm(forms.ModelForm):
         }
 
 class MovimientoForm(forms.ModelForm):
+    """Form for manual inventory adjustments only. Sales/purchases go through POS."""
     class Meta:
         model = Movimiento
         fields = ['producto', 'tipo', 'cantidad', 'descripcion']
+        widgets = {
+            'descripcion': forms.Textarea(attrs={
+                'rows': 2,
+                'placeholder': 'Ej: Ajuste por conteo físico, merma, daño...',
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['descripcion'].required = True
+        self.fields['descripcion'].help_text = 'Obligatorio: describe el motivo del ajuste'
+        input_cls = 'w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 dark:bg-gray-700 dark:text-white transition'
+        for name in self.fields:
+            self.fields[name].widget.attrs.setdefault('class', '')
+            self.fields[name].widget.attrs['class'] = input_cls
     
     def clean(self):
         cleaned_data = super().clean()
@@ -54,6 +81,42 @@ class MovimientoForm(forms.ModelForm):
         if tipo == 'salida' and producto and cantidad:
             if producto.stock < cantidad:
                 raise forms.ValidationError(f'Stock insuficiente. Stock actual: {producto.stock}')
+
+
+class ProductoEditForm(forms.ModelForm):
+    """Form for EDITING products. Stock is read-only (managed via movements)."""
+    class Meta:
+        model = Producto
+        fields = ['nombre', 'descripcion', 'categoria', 'precio', 'stock_minimo', 'imagen', 'codigo_barras']
+        widgets = {
+            'nombre': forms.TextInput(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-100 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400',
+                'placeholder': 'Ej. Leche Entera'
+            }),
+            'descripcion': forms.Textarea(attrs={
+                'rows': 3,
+                'class': 'mt-1 block w-full rounded-md border-gray-100 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400',
+                'placeholder': 'Descripción del producto...'
+            }),
+            'categoria': forms.Select(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-100 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200'
+            }),
+            'precio': forms.NumberInput(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-100 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400',
+                'placeholder': 'Ej. 10000 (COP)'
+            }),
+            'stock_minimo': forms.NumberInput(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-100 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400',
+                'placeholder': '5'
+            }),
+            'codigo_barras': forms.TextInput(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-100 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400',
+                'placeholder': 'Ej. 7891234567890'
+            }),
+            'imagen': forms.FileInput(attrs={
+                'class': 'mt-1 block w-full text-sm text-gray-500 dark:text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-teal-800 dark:file:bg-gray-600 dark:file:text-white dark:hover:file:bg-teal-700'
+            }),
+        }
 
 
 # ============================================================================

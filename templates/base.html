@@ -4,24 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}El Solterito - Gestión de Inventario{% endblock %}</title>
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Fuentes de Google (opcional) -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
     {% load static %}
     <link rel="stylesheet" href="{% static 'css/estilo.css' %}">
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-    </style>
-    <!-- Configuración personalizada de Tailwind (opcional) -->
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
-                        primary: '#0f766e',   // teal-700
-                        secondary: '#f59e0b',  // amber-500
+                        primary: '#0f766e',
+                        secondary: '#f59e0b',
                     },
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
@@ -30,251 +24,277 @@
             }
         }
     </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
 </head>
-<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 antialiased">
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 antialiased">
 
-    {% if request.resolver_match.url_name != 'login' %}
-    <!-- Navbar mejorado con diseño moderno y responsive -->
-    <nav class="bg-white dark:bg-gray-800 shadow-md border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
-        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16">
-                <!-- Logo / Marca -->
-                <div class="flex-shrink-0">
-                    <a href="{% url 'inventario:lista_productos' %}" class="text-2xl font-bold text-primary hover:text-teal-800 transition">
-                        El Solterito
-                    </a>
-                </div>
+{% if request.resolver_match.url_name != 'login' %}
+<!-- Mobile sidebar overlay -->
+<div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
 
-                <!-- Menú para desktop (oculto en móvil) -->
-                <div class="hidden md:flex md:items-center md:space-x-1">
-                    <a href="{% url 'inventario:lista_productos' %}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary hover:bg-teal-50 dark:hover:bg-teal-900 transition">Inicio</a>
-                    <a href="{% url 'inventario:lista_movimientos' %}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary hover:bg-teal-50 dark:hover:bg-teal-900 transition">Movimientos</a>
-                    <a href="{% url 'inventario:reportes' %}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary hover:bg-teal-50 dark:hover:bg-teal-900 transition">Reportes</a>
-                    {% if user.is_authenticated %}
-                        <a href="{% url 'inventario:crear_producto' %}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary hover:bg-teal-50 dark:hover:bg-teal-900 transition">Nuevo producto</a>
-                        
-                        <!-- Dropdown de usuario con click (JS incluido) -->
-                        <div class="relative ml-3" id="user-dropdown-container">
-                            <button id="user-dropdown-button" class="flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-teal-50 dark:hover:bg-teal-900 focus:outline-none">
-                                <span>{{ user.username }}</span>
-                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                </svg>
-                            </button>
-                            <!-- Dropdown (oculto por defecto) -->
-                            <div id="user-dropdown-menu" class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 border border-gray-200 dark:border-gray-700 hidden">
-                                <!-- Toggle tema oscuro -->
-                                <div class="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-                                    <button id="theme-toggle" class="flex items-center space-x-2 w-full text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded">
-                                        <svg id="theme-icon-sun" class="h-4 w-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
-                                        </svg>
-                                        <svg id="theme-icon-moon" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
-                                        </svg>
-                                        <span id="theme-text">Modo oscuro</span>
-                                    </button>
-                                </div>
-                                <form method="post" action="{% url 'logout' %}">
-                                    {% csrf_token %}
-                                    <button type="submit" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                        Cerrar sesión
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    {% else %}
-                        <a href="{% url 'login' %}" class="px-4 py-2 rounded-md text-sm font-medium text-white bg-primary hover:bg-teal-800 transition shadow-sm">Iniciar sesión</a>
-                    {% endif %}
-                </div>
-
-                <!-- Botón de menú móvil (hamburguesa) -->
-                <div class="md:hidden flex items-center">
-                    <button type="button" id="mobile-menu-button" class="text-gray-700 hover:text-primary focus:outline-none">
-                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                        </svg>
-                    </button>
-                </div>
+<!-- Sidebar -->
+<aside id="sidebar" class="fixed top-0 left-0 z-50 h-screen w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform -translate-x-full lg:translate-x-0 transition-transform duration-200 flex flex-col">
+    <!-- Logo -->
+    <div class="flex items-center h-16 px-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+        <a href="{% url 'inventario:dashboard' %}" class="flex items-center space-x-2">
+            <div class="w-8 h-8 bg-teal-600 rounded-lg flex items-center justify-center">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
             </div>
+            <span class="text-lg font-bold text-gray-800 dark:text-white">El Solterito</span>
+        </a>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="flex-1 overflow-y-auto scrollbar-hide py-4 px-3 space-y-1">
+        <!-- Operaciones (most important - top) -->
+        <div class="px-3 mb-4 space-y-2">
+            <p class="mb-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Operaciones</p>
+            <a href="{% url 'inventario:venta_rapida' %}" class="flex items-center justify-center w-full px-3 py-2.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition shadow-sm {% if request.resolver_match.url_name == 'venta_rapida' %}ring-2 ring-green-400 ring-offset-1{% endif %}">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/></svg>
+                Nueva Venta
+            </a>
+            <a href="{% url 'inventario:compra_rapida' %}" class="flex items-center justify-center w-full px-3 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition shadow-sm {% if request.resolver_match.url_name == 'compra_rapida' %}ring-2 ring-blue-400 ring-offset-1{% endif %}">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z"/></svg>
+                Nueva Compra
+            </a>
         </div>
 
-        <!-- Menú móvil (oculto por defecto, se muestra con JS simple) -->
-        <div class="md:hidden hidden" id="mobile-menu">
-            <div class="px-2 pt-2 pb-3 space-y-1">
-                <a href="{% url 'inventario:lista_productos' %}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary hover:bg-teal-50">Inicio</a>
-                <a href="{% url 'inventario:lista_movimientos' %}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary hover:bg-teal-50">Movimientos</a>
-                <a href="{% url 'inventario:reportes' %}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary hover:bg-teal-50">Reportes</a>
-                {% if user.is_authenticated %}
-                    <a href="{% url 'inventario:crear_producto' %}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary hover:bg-teal-50">Nuevo producto</a>
-                    <span class="block px-3 py-2 text-base font-medium text-gray-500">Hola, {{ user.username }}</span>
+        <hr class="border-gray-200 dark:border-gray-700 mx-3">
+
+        <p class="px-3 mt-3 mb-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">General</p>
+        <a href="{% url 'inventario:dashboard' %}" class="sidebar-link flex items-center px-3 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg transition {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+            <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+            Dashboard
+        </a>
+        <a href="{% url 'inventario:lista_productos' %}" class="sidebar-link flex items-center px-3 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg transition {% if 'producto' in request.resolver_match.url_name %}active{% endif %}">
+            <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+            Productos
+        </a>
+        <a href="{% url 'inventario:lista_proveedores' %}" class="sidebar-link flex items-center px-3 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg transition {% if 'proveedor' in request.resolver_match.url_name %}active{% endif %}">
+            <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+            Proveedores
+        </a>
+
+        <p class="px-3 mt-6 mb-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Historial</p>
+        <a href="{% url 'inventario:lista_ventas' %}" class="sidebar-link flex items-center px-3 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg transition {% if request.resolver_match.url_name == 'lista_ventas' or request.resolver_match.url_name == 'detalle_venta' %}active{% endif %}">
+            <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/></svg>
+            Ventas
+        </a>
+        <a href="{% url 'inventario:lista_compras' %}" class="sidebar-link flex items-center px-3 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg transition {% if request.resolver_match.url_name == 'lista_compras' or request.resolver_match.url_name == 'detalle_compra' %}active{% endif %}">
+            <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z"/></svg>
+            Compras
+        </a>
+        <a href="{% url 'inventario:lista_movimientos' %}" class="sidebar-link flex items-center px-3 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg transition {% if 'movimiento' in request.resolver_match.url_name %}active{% endif %}">
+            <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg>
+            Movimientos
+        </a>
+
+        <p class="px-3 mt-6 mb-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Análisis</p>
+        <a href="{% url 'inventario:reportes' %}" class="sidebar-link flex items-center px-3 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg transition {% if request.resolver_match.url_name == 'reportes' %}active{% endif %}">
+            <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            Reportes
+        </a>
+
+        <!-- Secondary actions -->
+        <div class="mt-6 px-3 space-y-2">
+            <a href="{% url 'inventario:crear_producto' %}" class="flex items-center justify-center w-full px-3 py-2 text-sm font-medium text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-900/30 hover:bg-teal-100 dark:hover:bg-teal-900/50 rounded-lg border border-teal-200 dark:border-teal-800 transition">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Nuevo Producto
+            </a>
+            <a href="{% url 'inventario:crear_movimiento' %}" class="flex items-center justify-center w-full px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 transition">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                Ajuste de Inventario
+            </a>
+        </div>
+    </nav>
+
+    <!-- User section at bottom -->
+    {% if user.is_authenticated %}
+    <div class="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 p-4">
+        <div class="flex items-center">
+            <div class="w-8 h-8 bg-teal-100 dark:bg-teal-900 rounded-full flex items-center justify-center text-teal-700 dark:text-teal-300 font-bold text-sm">
+                {{ user.username|make_list|first|upper }}
+            </div>
+            <div class="ml-3 flex-1 min-w-0">
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">{{ user.username }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Administrador</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</aside>
+
+<!-- Main wrapper -->
+<div class="lg:ml-64 min-h-screen flex flex-col">
+    <!-- Top navbar -->
+    <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30 h-16 flex items-center px-4 sm:px-6">
+        <!-- Mobile menu button -->
+        <button onclick="toggleSidebar()" class="lg:hidden mr-4 p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-400 transition">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+
+        <!-- Breadcrumb / Page title -->
+        <div class="flex-1 min-w-0">
+            <h1 class="text-lg font-semibold text-gray-800 dark:text-gray-200 truncate">{% block page_title %}Sistema de Inventario{% endblock %}</h1>
+        </div>
+
+        <!-- Right side actions -->
+        <div class="flex items-center space-x-2">
+            <!-- Theme toggle -->
+            <button id="theme-toggle" class="btn-icon p-2 rounded-lg" aria-label="Cambiar tema" title="Cambiar tema">
+                <svg id="theme-icon-sun" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                <svg id="theme-icon-moon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+            </button>
+
+            <!-- Notifications placeholder -->
+            <button class="btn-icon p-2 rounded-lg relative" aria-label="Notificaciones" title="Notificaciones">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                <span id="notification-badge" class="hidden absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+            </button>
+
+            <!-- User dropdown -->
+            {% if user.is_authenticated %}
+            <div class="relative" id="user-dropdown-container">
+                <button id="user-dropdown-button" class="flex items-center space-x-2 p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                    <div class="w-8 h-8 bg-teal-100 dark:bg-teal-900 rounded-full flex items-center justify-center text-teal-700 dark:text-teal-300 font-bold text-sm">
+                        {{ user.username|make_list|first|upper }}
+                    </div>
+                    <span class="hidden sm:block text-sm font-medium">{{ user.username }}</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div id="user-dropdown-menu" class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg py-1 border border-gray-200 dark:border-gray-700 hidden z-50">
+                    <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                        <p class="text-sm font-medium text-gray-900 dark:text-white">{{ user.username }}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ user.email|default:"admin@solterito.com" }}</p>
+                    </div>
                     <form method="post" action="{% url 'logout' %}">
                         {% csrf_token %}
-                        <button type="submit" class="w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary hover:bg-teal-50">
+                        <button type="submit" class="w-full flex items-center px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
                             Cerrar sesión
                         </button>
                     </form>
-                {% else %}
-                    <a href="{% url 'login' %}" class="block px-3 py-2 rounded-md text-base font-medium text-white bg-primary hover:bg-teal-800">Iniciar sesión</a>
-                {% endif %}
+                </div>
             </div>
+            {% else %}
+            <a href="{% url 'login' %}" class="px-4 py-2 rounded-lg text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 transition">Iniciar sesión</a>
+            {% endif %}
         </div>
-    </nav>
-    {% endif %}
+    </header>
 
-    <!-- Mensajes flash convertidos a toasts -->
+    <!-- Flash messages -->
     {% if messages %}
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                {% for message in messages %}
-                    showToast('{{ message|escapejs }}', '{{ message.tags|default:"info" }}');
-                {% endfor %}
-            });
-        </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            {% for message in messages %}
+                showToast('{{ message|escapejs }}', '{{ message.tags|default:"info" }}');
+            {% endfor %}
+        });
+    </script>
     {% endif %}
 
-    <!-- Contenido principal -->
-    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Main content -->
+    <main class="flex-1 p-4 sm:p-6 lg:p-8">
         {% block content %}{% endblock %}
     </main>
 
-    <!-- Contenedor de toasts -->
-    <div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
-
-    <!-- Footer simple (opcional) -->
-    {% if request.resolver_match.url_name != 'login' %}
-    <footer class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 mt-12">
-        <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-4 text-center text-gray-500 dark:text-gray-400 text-sm">
-            &copy; {% now "Y" %} Tienda El Solterito - Sistema de Gestión de Inventario
-        </div>
+    <!-- Footer -->
+    <footer class="border-t border-gray-200 dark:border-gray-700 px-6 py-4">
+        <p class="text-center text-xs text-gray-500 dark:text-gray-400">&copy; {% now "Y" %} Tienda El Solterito - Sistema de Gestión de Inventario</p>
     </footer>
-    {% endif %}
-
-    <!-- JavaScript para menú móvil y dropdown de usuario -->
+</div>
+{% else %}
+    <!-- Login page (no sidebar) -->
+    {% if messages %}
     <script>
-        // Menú móvil
-        const btn = document.getElementById('mobile-menu-button');
-        const menu = document.getElementById('mobile-menu');
-        if (btn && menu) {
-            btn.addEventListener('click', () => {
-                menu.classList.toggle('hidden');
-            });
+        document.addEventListener('DOMContentLoaded', function() {
+            {% for message in messages %}
+                showToast('{{ message|escapejs }}', '{{ message.tags|default:"info" }}');
+            {% endfor %}
+        });
+    </script>
+    {% endif %}
+    <main>
+        {% block login_content %}{% endblock %}
+    </main>
+{% endif %}
+
+    <!-- Toast container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-[60] space-y-2"></div>
+
+    <script>
+        // Sidebar toggle (mobile)
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('open');
         }
 
-        // Dropdown de usuario con click y cierre al hacer clic fuera
+        // Close sidebar on link click (mobile)
+        document.querySelectorAll('#sidebar a.sidebar-link').forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth < 1024) toggleSidebar();
+            });
+        });
+
+        // User dropdown
         const userButton = document.getElementById('user-dropdown-button');
         const userMenu = document.getElementById('user-dropdown-menu');
-
         if (userButton && userMenu) {
             userButton.addEventListener('click', (e) => {
-                e.stopPropagation(); // Evita que el clic llegue al document y cierre inmediatamente
+                e.stopPropagation();
                 userMenu.classList.toggle('hidden');
             });
-
             document.addEventListener('click', (e) => {
-                // Cierra el menú si el clic no fue en el botón ni en el menú   
                 if (!userButton.contains(e.target) && !userMenu.contains(e.target)) {
                     userMenu.classList.add('hidden');
                 }
             });
         }
 
-        // Función para mostrar toasts
+        // Toast system
         function showToast(message, type = 'info') {
-            const toastContainer = document.getElementById('toast-container');
+            const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
-            
-            // Estilos base del toast
             toast.className = 'flex items-center justify-between p-4 rounded-lg shadow-lg max-w-sm w-full transform translate-x-full transition-transform duration-300';
-            
-            // Colores según tipo
-            if (type === 'success') {
-                toast.classList.add('bg-green-500', 'text-white');
-            } else if (type === 'error') {
-                toast.classList.add('bg-red-500', 'text-white');
-            } else if (type === 'warning') {
-                toast.classList.add('bg-yellow-500', 'text-black');
-            } else {
-                toast.classList.add('bg-blue-500', 'text-white');
-            }
-            
-            // Contenido del toast
-            toast.innerHTML = `
-                <div class="flex items-center">
-                    <span class="mr-2">
-                        ${type === 'success' ? '[OK]' : type === 'error' ? '[ERROR]' : type === 'warning' ? '[WARN]' : '[INFO]'}
-                    </span>
-                    <span>${message}</span>
-                </div>
-                <button onclick="this.parentElement.remove()" class="text-white hover:text-gray-200 ml-4">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            `;
-            
-            // Agregar al contenedor
-            toastContainer.appendChild(toast);
-            
-            // Animación de entrada
-            setTimeout(() => {
-                toast.classList.remove('translate-x-full');
-            }, 100);
-            
-            // Auto-remover después de 5 segundos
-            setTimeout(() => {
-                toast.classList.add('translate-x-full');
-                setTimeout(() => {
-                    if (toast.parentElement) {
-                        toast.remove();
-                    }
-                }, 300);
-            }, 5000);
+            const colors = { success: 'bg-green-500 text-white', error: 'bg-red-500 text-white', warning: 'bg-yellow-500 text-black', info: 'bg-blue-500 text-white' };
+            toast.className += ' ' + (colors[type] || colors.info);
+            const icons = { success: '&#10003;', error: '&#10007;', warning: '&#9888;', info: '&#8505;' };
+            toast.innerHTML = `<div class="flex items-center"><span class="mr-2 text-lg">${icons[type] || icons.info}</span><span class="text-sm">${message}</span></div><button onclick="this.parentElement.remove()" class="ml-4 hover:opacity-75"><svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.remove('translate-x-full'), 100);
+            setTimeout(() => { toast.classList.add('translate-x-full'); setTimeout(() => toast.parentElement && toast.remove(), 300); }, 5000);
         }
 
-        // Toggle tema oscuro
+        // Theme toggle
         function updateThemeUI(mode) {
             const html = document.documentElement;
             const iconSun = document.getElementById('theme-icon-sun');
             const iconMoon = document.getElementById('theme-icon-moon');
-            const text = document.getElementById('theme-text');
-
-            if (!html || !iconSun || !iconMoon || !text) return;
-
-            if (mode === 'dark') {
-                html.classList.add('dark');
-                iconSun.classList.remove('hidden');
-                iconMoon.classList.add('hidden');
-                text.textContent = 'Modo claro';
-            } else {
-                html.classList.remove('dark');
-                iconSun.classList.add('hidden');
-                iconMoon.classList.remove('hidden');
-                text.textContent = 'Modo oscuro';
-            }
+            if (!html || !iconSun || !iconMoon) return;
+            if (mode === 'dark') { html.classList.add('dark'); iconSun.classList.remove('hidden'); iconMoon.classList.add('hidden'); }
+            else { html.classList.remove('dark'); iconSun.classList.add('hidden'); iconMoon.classList.remove('hidden'); }
         }
 
-        function initThemeToggle() {
-            const toggle = document.getElementById('theme-toggle');
-            if (!toggle) return;
-
-            const userPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-            const savedTheme = localStorage.getItem('theme');
-            const initialTheme = savedTheme || (userPrefersDark ? 'dark' : 'light');
-
-            updateThemeUI(initialTheme);
-            localStorage.setItem('theme', initialTheme);
-
-            toggle.addEventListener('click', (e) => {
-                e.stopPropagation(); // Evitar que el clic cierre el dropdown
-                const currentTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
-                const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
-                updateThemeUI(nextTheme);
-                localStorage.setItem('theme', nextTheme);
+        (function initTheme() {
+            const saved = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = saved || (prefersDark ? 'dark' : 'light');
+            updateThemeUI(theme);
+            localStorage.setItem('theme', theme);
+            document.addEventListener('DOMContentLoaded', () => {
+                const toggle = document.getElementById('theme-toggle');
+                if (!toggle) return;
+                toggle.addEventListener('click', () => {
+                    const next = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
+                    updateThemeUI(next);
+                    localStorage.setItem('theme', next);
+                });
             });
-        }
-
-        document.addEventListener('DOMContentLoaded', initThemeToggle);
+        })();
     </script>
 </body>
 </html>

@@ -2,15 +2,14 @@
 {% extends 'base.html' %}
 
 {% block title %}Sesión cerrada - El Solterito{% endblock %}
+{% block page_title %}Sesión Cerrada{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <div class="max-w-md mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center border-t-4 border-teal-500">
-        <h1 class="text-3xl font-bold text-teal-800 dark:text-teal-400 mb-4">Sesión cerrada</h1>
-        <p class="text-gray-700 dark:text-gray-300 mb-8">Gracias por usar el sistema de inventario.</p>
+    <div class="max-w-md mx-auto card p-8 text-center">
+        <h2 class="page-title mb-4">Sesión cerrada</h2>
+        <p class="text-gray-600 dark:text-gray-400 mb-8">Gracias por usar el sistema de inventario.</p>
         <a href="{% url 'login' %}" class="inline-block btn-primary">
             Volver a iniciar sesión
         </a>
     </div>
-</div>
 {% endblock %}

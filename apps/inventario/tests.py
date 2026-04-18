@@ -41,16 +41,8 @@ class ProductoModelTests(TestCase):
         with self.assertRaises(Exception):
             p.full_clean()
 
-        # stock_minimo mayor que stock
-        p = Producto(
-            nombre="Err2",
-            categoria=self.cat,
-            precio=1,
-            stock=1,
-            stock_minimo=5,
-        )
-        with self.assertRaises(Exception):
-            p.full_clean()
+        # stock_minimo mayor que stock ya no es un error de validación
+        # (el stock se gestiona a través de Movimientos, no directamente)
 
         # código de barras duplicado
         Producto.objects.create(
@@ -226,6 +218,7 @@ class NoError500ViewTests(TestCase):
         self.assertFormError(response, 'form', 'nombre', ['Este campo es obligatorio.'])
 
     def test_post_crear_movimiento_invalid_stock_does_not_return_500(self):
+        self.producto.refresh_from_db()
         data = {
             'producto': self.producto.pk,
             'tipo': 'salida',

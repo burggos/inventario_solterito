@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Venta {{ venta.numero }} - El Solterito{% endblock %}
+{% block page_title %}Detalle de Venta{% endblock %}
+
+{% block content %}
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800 dark:text-white">{{ venta.numero }}</h2>
+            <p class="text-gray-500 dark:text-gray-400 mt-1">Detalle de la venta</p>
+        </div>
+        <div class="flex space-x-2">
+            {% if venta.estado != 'cancelada' %}
+            <form method="post" action="{% url 'inventario:cancelar_venta' venta.pk %}" class="inline">
+                {% csrf_token %}
+                <button type="submit" class="inline-flex items-center justify-center bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white font-semibold text-sm px-4 py-2 rounded-lg shadow-sm transition" onclick="return confirm('¿Cancelar esta venta? El stock será revertido.')">
+                    Cancelar Venta
+                </button>
+            </form>
+            {% endif %}
+            <a href="{% url 'inventario:lista_ventas' %}" class="inline-flex items-center justify-center bg-gray-100 hover:bg-gray-200 dark:bg-gray-700/50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 font-medium text-sm px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 transition">Volver</a>
+        </div>
+    </div>
+
+    <!-- Encabezado -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <h2 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Cliente</h2>
+            <p class="text-xl font-bold text-gray-900 dark:text-gray-100">{{ venta.cliente_nombre }}</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <h2 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Forma de Pago</h2>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">{{ venta.get_forma_pago_display }}</span>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">{{ venta.fecha_venta|date:"d/m/Y H:i" }}</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <h2 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Estado</h2>
+            {% if venta.estado == 'completada' %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">Completada</span>
+            {% elif venta.estado == 'cancelada' %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">Cancelada</span>
+            {% else %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">Pendiente</span>
+            {% endif %}
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <h2 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Total</h2>
+            <p class="text-3xl font-bold text-green-600 dark:text-green-400">COP {{ venta.total|floatformat:0 }}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ detalles.count }} ítem{{ detalles.count|pluralize:"es" }}</p>
+        </div>
+    </div>
+
+    {% if venta.notas %}
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+        <h2 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Notas</h2>
+        <p class="text-gray-700 dark:text-gray-300">{{ venta.notas }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Detalles -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-4">Productos Vendidos</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
+                        <th class="pb-3 pr-4">Producto</th>
+                        <th class="pb-3 pr-4 text-center">Cantidad</th>
+                        <th class="pb-3 pr-4 text-right">Precio Unit.</th>
+                        <th class="pb-3 pr-4 text-center">Descuento</th>
+                        <th class="pb-3 text-right">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                    {% for detalle in detalles %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                        <td class="py-3 pr-4 font-semibold">
+                            <a href="{% url 'inventario:detalle_producto' detalle.producto.pk %}" class="text-teal-600 hover:text-teal-700">{{ detalle.producto.nombre }}</a>
+                        </td>
+                        <td class="py-3 pr-4 text-center">{{ detalle.cantidad }}</td>
+                        <td class="py-3 pr-4 text-right">COP {{ detalle.precio_unitario|floatformat:0 }}</td>
+                        <td class="py-3 pr-4 text-center">
+                            {% if detalle.descuento_porcentaje > 0 %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">{{ detalle.descuento_porcentaje }}%</span>
+                            {% else %}
+                                <span class="text-gray-400">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 text-right font-semibold">COP {{ detalle.subtotal|floatformat:0 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="border-t-2 border-gray-200 dark:border-gray-600">
+                        <td colspan="4" class="py-3 pr-4 text-right font-bold text-gray-900 dark:text-gray-100">TOTAL:</td>
+                        <td class="py-3 text-right font-bold text-green-600 dark:text-green-400">COP {{ venta.total|floatformat:0 }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+{% endblock %}

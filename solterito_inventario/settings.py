@@ -5,7 +5,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Redirecciones de autenticación
 LOGIN_URL = 'login'                              # o '/accounts/login/'
-LOGIN_REDIRECT_URL = 'inventario:lista_productos'  # o simplemente '/'
+LOGIN_REDIRECT_URL = 'inventario:dashboard'  # dashboard principal
 LOGOUT_REDIRECT_URL = 'login'                    # vuelve al formulario
 
 

@@ -52,8 +52,6 @@ class Producto(models.Model):
             raise ValidationError({'stock': 'El stock no puede ser negativo.'})
         if self.stock_minimo < 0:
             raise ValidationError({'stock_minimo': 'El stock mínimo no puede ser negativo.'})
-        if self.stock_minimo > self.stock:
-            raise ValidationError({'stock_minimo': 'El stock mínimo no puede superar al stock actual.'})
 
         # código de barras único ya está en la base, pero aseguramos limpieza
         if self.codigo_barras:
@@ -239,4 +237,3 @@ class DetalleVenta(models.Model):
         descuento = (self.cantidad * self.precio_unitario) * (self.descuento_porcentaje / 100)
         self.subtotal = (self.cantidad * self.precio_unitario) - descuento
         super().save(*args, **kwargs)
-        return f"{self.tipo} - {self.producto.nombre} ({self.cantidad})"

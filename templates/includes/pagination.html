@@ -1,0 +1,26 @@
+{#
+  Pagination — standard pagination block for list pages
+  
+  Variables:
+    page_obj    — Django Page object (required)
+    query_params — extra query string to preserve filters (optional, without leading &)
+#}
+{% if page_obj.has_other_pages %}
+<div class="mt-6 flex justify-center">
+    <nav class="pagination" aria-label="Paginación">
+        {% if page_obj.has_previous %}
+        <a href="?{{ query_params }}{% if query_params %}&{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>
+        {% endif %}
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+                <span class="active">{{ num }}</span>
+            {% elif num > page_obj.number|add:-3 and num < page_obj.number|add:3 %}
+                <a href="?{{ query_params }}{% if query_params %}&{% endif %}page={{ num }}">{{ num }}</a>
+            {% endif %}
+        {% endfor %}
+        {% if page_obj.has_next %}
+        <a href="?{{ query_params }}{% if query_params %}&{% endif %}page={{ page_obj.next_page_number }}">Siguiente</a>
+        {% endif %}
+    </nav>
+</div>
+{% endif %}

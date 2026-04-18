@@ -1,0 +1,25 @@
+{#
+  Empty State — shown when a table or list has no data
+  
+  Variables:
+    message  — Text to display (required)
+    colspan  — Number of table columns to span (optional, default 1)
+    icon     — SVG path for icon (optional)
+#}
+{% if colspan %}
+<tr>
+    <td colspan="{{ colspan }}" class="px-4 py-8 text-center">
+        {% if icon %}
+        <svg class="w-8 h-8 mx-auto mb-3 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ icon }}"/></svg>
+        {% endif %}
+        <p class="text-gray-400 dark:text-gray-500 text-sm">{{ message }}</p>
+    </td>
+</tr>
+{% else %}
+<div class="px-4 py-8 text-center">
+    {% if icon %}
+    <svg class="w-8 h-8 mx-auto mb-3 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ icon }}"/></svg>
+    {% endif %}
+    <p class="text-gray-400 dark:text-gray-500 text-sm">{{ message }}</p>
+</div>
+{% endif %}

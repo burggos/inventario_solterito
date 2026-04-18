@@ -1,51 +1,261 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Registrar Movimiento - El Solterito{% endblock %}
+{% block title %}Ajuste de Inventario - El Solterito{% endblock %}
+{% block page_title %}Ajuste de Inventario{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8 max-w-2xl">
-    <div class="mb-8">
-        <h1 class="text-4xl font-bold text-teal-800 dark:text-teal-400 mb-2">Registrar Movimiento</h1>
-        <p class="text-gray-600 dark:text-gray-400">Ingresa los detalles del movimiento</p>
+<form method="post" id="ajuste-form">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <div class="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 text-sm text-red-700 dark:text-red-300">
+        {{ form.non_field_errors }}
     </div>
+    {% endif %}
 
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 border-t-4 border-teal-500">
-        <form method="post">
-            {% csrf_token %}
-            
-            {% if form.non_field_errors %}
-            <div class="mb-4 p-4 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded-lg border border-red-300 dark:border-red-700">
-                {{ form.non_field_errors }}
-            </div>
-            {% endif %}
-
-            <div class="space-y-6">
-                {% for field in form %}
-                <div>
-                    <label for="{{ field.id_for_label }}" class="block text-gray-700 dark:text-gray-300 font-semibold mb-2">
-                        {{ field.label }}{% if field.field.required %} <span class="text-red-500">*</span>{% endif %}
-                    </label>
-                    {{ field }}
-                    {% if field.errors %}
-                        <p class="text-red-500 text-sm mt-1">{{ field.errors.0 }}</p>
-                    {% endif %}
-                    {% if field.help_text %}
-                        <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">{{ field.help_text }}</p>
-                    {% endif %}
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        <!-- Left: Adjustment data (3/5) -->
+        <div class="lg:col-span-3 space-y-4">
+            <!-- Product search -->
+            <div class="relative">
+                <div class="flex items-center bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 px-3">
+                    <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <input type="text" id="product-search"
+                        class="flex-1 px-3 py-3 text-sm bg-transparent border-0 focus:outline-none focus:ring-0 dark:text-white dark:placeholder-gray-400"
+                        placeholder="Buscar producto por nombre o código de barras..."
+                        autocomplete="off" autofocus
+                        {% if selected_product %}value="{{ selected_product.nombre }}"{% endif %}>
+                    <button type="button" id="clear-product" class="{% if not selected_product %}hidden{% endif %} text-gray-400 hover:text-red-500 transition p-1" title="Cambiar producto">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
                 </div>
-                {% endfor %}
+                <input type="hidden" name="producto" id="producto-id" value="{% if selected_product %}{{ selected_product.id }}{% endif %}">
+                <!-- Selected product info -->
+                <div id="selected-product-info" class="{% if not selected_product %}hidden{% endif %} mt-2 flex items-center justify-between bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 rounded-lg px-3 py-2">
+                    <div class="flex items-center text-sm">
+                        <svg class="w-4 h-4 text-teal-600 dark:text-teal-400 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        <span class="font-medium text-teal-800 dark:text-teal-200" id="selected-product-name">{% if selected_product %}{{ selected_product.nombre }}{% endif %}</span>
+                    </div>
+                    <span class="text-xs text-teal-600 dark:text-teal-400" id="selected-product-stock">{% if selected_product %}Stock: {{ selected_product.stock }}{% endif %}</span>
+                </div>
+                {% if form.producto.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.producto.errors.0 }}</p>
+                {% endif %}
+                <!-- Autocomplete dropdown -->
+                <div id="search-results" class="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 max-h-72 overflow-y-auto z-20 hidden"></div>
             </div>
 
-            <div class="mt-8 flex flex-col sm:flex-row sm:space-x-3 space-y-3 sm:space-y-0">
-                <button type="submit" class="btn-primary">
-                    Registrar movimiento
+            <div class="card p-4 space-y-4">
+                <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                    <h2 class="card-header">Datos del Ajuste</h2>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.tipo.id_for_label }}" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                            Tipo de Movimiento <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.tipo }}
+                        {% if form.tipo.errors %}
+                            <p class="text-red-500 text-xs mt-1">{{ form.tipo.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label for="{{ form.cantidad.id_for_label }}" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                            Cantidad <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.cantidad }}
+                        {% if form.cantidad.errors %}
+                            <p class="text-red-500 text-xs mt-1">{{ form.cantidad.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Notes + Submit (2/5) -->
+        <div class="lg:col-span-2 space-y-4">
+            <!-- Description -->
+            <div class="card p-4 space-y-3">
+                <div>
+                    <label for="{{ form.descripcion.id_for_label }}" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                        Motivo del Ajuste <span class="text-red-500">*</span>
+                    </label>
+                    {{ form.descripcion }}
+                    {% if form.descripcion.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.descripcion.errors.0 }}</p>
+                    {% endif %}
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ form.descripcion.help_text }}</p>
+                </div>
+            </div>
+
+            <!-- Submit -->
+            <div class="card p-4">
+                <div class="flex items-center mb-3 text-xs text-gray-500 dark:text-gray-400">
+                    <svg class="w-4 h-4 mr-1.5 text-teal-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    El stock se actualizará automáticamente al confirmar
+                </div>
+                <button type="submit"
+                    class="w-full py-3 bg-teal-600 hover:bg-teal-700 dark:bg-teal-700 dark:hover:bg-teal-800 text-white font-semibold rounded-lg transition text-sm">
+                    Registrar Ajuste
                 </button>
-                <a href="javascript:history.back()" class="btn-secondary">
+                <a href="javascript:history.back()"
+                    class="block w-full mt-2 py-2 text-xs text-center text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition">
                     Cancelar
                 </a>
             </div>
-        </form>
+
+            <!-- Info panel -->
+            <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 p-3 space-y-1">
+                <p class="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">Tipos de ajuste</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                    <span class="inline-block w-2 h-2 bg-green-500 rounded-full mr-1.5"></span>
+                    <strong>Entrada:</strong> Suma stock (reposición, devolución)
+                </p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                    <span class="inline-block w-2 h-2 bg-red-500 rounded-full mr-1.5"></span>
+                    <strong>Salida:</strong> Resta stock (merma, daño, pérdida)
+                </p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                    <span class="inline-block w-2 h-2 bg-yellow-500 rounded-full mr-1.5"></span>
+                    <strong>Ajuste:</strong> Corrección por conteo físico
+                </p>
+            </div>
+        </div>
     </div>
-</div>
+</form>
+
+<style>
+    .search-result.highlighted { background: rgba(13,148,136,0.08); }
+    .dark .search-result.highlighted { background: rgba(94,234,212,0.1); }
+</style>
+
+<script>
+const AjusteSearch = {
+    timeout: null,
+    selectedIdx: -1,
+
+    init() {
+        const search = document.getElementById('product-search');
+        search.addEventListener('input', () => this.onInput(search.value));
+        search.addEventListener('keydown', e => this.onKey(e));
+        search.addEventListener('focus', () => {
+            if (!document.getElementById('producto-id').value && search.value.length >= 2) {
+                this.onInput(search.value);
+            }
+        });
+        document.getElementById('clear-product').addEventListener('click', () => this.clearProduct());
+        document.addEventListener('click', e => {
+            if (!e.target.closest('#product-search') && !e.target.closest('#search-results')) {
+                this.hideResults();
+            }
+        });
+    },
+
+    onInput(q) {
+        clearTimeout(this.timeout);
+        if (document.getElementById('producto-id').value) return;
+        if (q.length < 2) { this.hideResults(); return; }
+        this.timeout = setTimeout(async () => {
+            try {
+                const res = await fetch(`{% url 'inventario:api_buscar_productos' %}?q=${encodeURIComponent(q)}`);
+                const data = await res.json();
+                this.showResults(data);
+            } catch(e) { this.hideResults(); }
+        }, 200);
+    },
+
+    showResults(products) {
+        const el = document.getElementById('search-results');
+        this.selectedIdx = -1;
+        if (!products.length) {
+            el.innerHTML = '<div class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">No se encontraron productos</div>';
+            el.classList.remove('hidden');
+            return;
+        }
+        el.innerHTML = products.map((p, i) => `
+            <div class="search-result px-4 py-2.5 cursor-pointer flex justify-between items-center border-b border-gray-100 dark:border-gray-700 last:border-0 transition"
+                 data-idx="${i}" data-id="${p.id}" data-nombre="${this.esc(p.nombre)}" data-stock="${p.stock}">
+                <div class="min-w-0">
+                    <span class="font-medium text-gray-800 dark:text-white text-sm">${this.esc(p.nombre)}</span>
+                    ${p.codigo_barras ? `<span class="text-xs text-gray-400 ml-2">${this.esc(p.codigo_barras)}</span>` : ''}
+                </div>
+                <div class="text-right flex-shrink-0 ml-3">
+                    <span class="text-xs text-gray-400">Stock: ${p.stock}</span>
+                </div>
+            </div>
+        `).join('');
+        el.classList.remove('hidden');
+        el.querySelectorAll('.search-result').forEach(r => {
+            r.addEventListener('click', () => this.selectProduct(r));
+        });
+    },
+
+    hideResults() {
+        document.getElementById('search-results').classList.add('hidden');
+        this.selectedIdx = -1;
+    },
+
+    onKey(e) {
+        const items = document.querySelectorAll('.search-result[data-id]');
+        if (!items.length && e.key !== 'Escape') return;
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            this.selectedIdx = Math.min(this.selectedIdx + 1, items.length - 1);
+            this.highlightResults(items);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            this.selectedIdx = Math.max(this.selectedIdx - 1, 0);
+            this.highlightResults(items);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (this.selectedIdx >= 0 && items[this.selectedIdx]) {
+                this.selectProduct(items[this.selectedIdx]);
+            } else if (items.length === 1) {
+                this.selectProduct(items[0]);
+            }
+        } else if (e.key === 'Escape') {
+            this.hideResults();
+        }
+    },
+
+    highlightResults(items) {
+        items.forEach((r, i) => r.classList.toggle('highlighted', i === this.selectedIdx));
+        if (this.selectedIdx >= 0 && items[this.selectedIdx]) {
+            items[this.selectedIdx].scrollIntoView({ block: 'nearest' });
+        }
+    },
+
+    selectProduct(el) {
+        const id = el.dataset.id;
+        const nombre = el.dataset.nombre;
+        const stock = el.dataset.stock;
+
+        document.getElementById('producto-id').value = id;
+        document.getElementById('product-search').value = nombre;
+        document.getElementById('selected-product-name').textContent = nombre;
+        document.getElementById('selected-product-stock').textContent = `Stock: ${stock}`;
+        document.getElementById('selected-product-info').classList.remove('hidden');
+        document.getElementById('clear-product').classList.remove('hidden');
+        this.hideResults();
+    },
+
+    clearProduct() {
+        document.getElementById('producto-id').value = '';
+        document.getElementById('product-search').value = '';
+        document.getElementById('selected-product-info').classList.add('hidden');
+        document.getElementById('clear-product').classList.add('hidden');
+        document.getElementById('product-search').focus();
+    },
+
+    esc(s) {
+        const d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    },
+};
+
+document.addEventListener('DOMContentLoaded', () => AjusteSearch.init());
+</script>
 {% endblock %}
