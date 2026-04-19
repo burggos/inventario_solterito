@@ -1,0 +1,35 @@
+# Python
+*.pyc
+__pycache__/
+*.pyo
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Django
+staticfiles/
+media/productos/*
+!media/productos/.gitkeep
+
+# Database
+db.sqlite3
+
+# Env
+.env
+
+# Backups
+*.backup
+*.old
+*.old2

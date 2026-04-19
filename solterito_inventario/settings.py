@@ -1,25 +1,33 @@
+import os
 import sys
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Redirecciones de autenticación
-LOGIN_URL = 'login'                              # o '/accounts/login/'
-LOGIN_REDIRECT_URL = 'inventario:dashboard'  # dashboard principal
-LOGOUT_REDIRECT_URL = 'login'                    # vuelve al formulario
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'inventario:dashboard'
+LOGOUT_REDIRECT_URL = 'login'
 
 
 sys.path.append(str(BASE_DIR / 'apps'))
 
-# SECRET_KEY (usa la que generaste)
-SECRET_KEY = 'j0)6hp%=z0+y6e^t5ip#h@#$jnfy+kd#2d^v%=dg4t3u0h2s2#'
+# SECRET_KEY: en producción se lee de variable de entorno
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'j0)6hp%=z0+y6e^t5ip#h@#$jnfy+kd#2d^v%=dg4t3u0h2s2#')
 
-DEBUG = True
+# DEBUG: False en producción
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
+
 ALLOWED_HOSTS = [
     '127.0.0.1',
     'localhost',
     '0.0.0.0',
     'testserver',
+    '.pythonanywhere.com',
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.pythonanywhere.com',
 ]
 
 INSTALLED_APPS = [
@@ -62,28 +70,13 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'solterito_inventario.wsgi.application'
 
-# Base de datos
-# Use SQLite for development, PostgreSQL for production
-if 'test' in sys.argv or DEBUG:
-    # Use SQLite for development and testing
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
+# Base de datos — SQLite (funciona en PythonAnywhere)
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
-else:
-    # Use PostgreSQL for production
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': 'solterito_db',
-            'USER': 'solterito_user',
-            'PASSWORD': '04243250145',
-            'HOST': 'localhost',
-            'PORT': '5432',
-        }
-    }
+}
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
