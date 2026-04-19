@@ -1,225 +1,428 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Reportes - El Solterito{% endblock %}
-{% block page_title %}Reportes{% endblock %}
+{% block title %}Analítica - El Solterito{% endblock %}
+{% block page_title %}Analítica{% endblock %}
 
 {% block content %}
-    <div class="mb-6">
-        <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Dashboard de Reportes</h2>
-        <p class="text-gray-500 dark:text-gray-400 mt-1">Visión general del inventario y movimientos en tiempo real</p>
+<div class="mb-6">
+    <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Inteligencia de Negocio</h2>
+    <p class="text-gray-500 dark:text-gray-400 mt-1">Análisis histórico, comparativo y de tendencias &middot; {{ rango_label }}</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     FILTROS AVANZADOS
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 mb-6">
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">Filtros de Análisis</h3>
+        <a href="{% url 'inventario:reportes' %}" class="text-xs font-medium text-teal-600 dark:text-teal-400 hover:text-teal-800 transition">Restablecer filtros</a>
     </div>
-
-    <!-- Filtro por rango de fechas -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 mb-6">
-        <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-4">Filtrar por período</h2>
-        <form method="get" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 items-end">
-            <div>
-                <label for="desde" class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Desde</label>
-                <input id="desde" name="desde" type="date" value="{{ fecha_desde }}">
-            </div>
-            <div>
-                <label for="hasta" class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Hasta</label>
-                <input id="hasta" name="hasta" type="date" value="{{ fecha_hasta }}">
-            </div>
-            <div>
-                <label for="grouping" class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Agrupar por</label>
-                <select id="grouping" name="grouping">
-                    <option value="dia" {% if grouping == 'dia' %}selected{% endif %}>Día</option>
-                    <option value="semana" {% if grouping == 'semana' %}selected{% endif %}>Semana</option>
-                    <option value="mes" {% if grouping == 'mes' %}selected{% endif %}>Mes</option>
-                    <option value="ano" {% if grouping == 'ano' %}selected{% endif %}>Año</option>
-                </select>
-            </div>
-            <div class="flex items-center gap-2">
-                <button type="submit" class="btn-primary">Aplicar filtro</button>
-                <a href="{% url 'inventario:reportes' %}" class="btn-outline">Limpiar</a>
-            </div>
-        </form>
-    </div>
-
-    <!-- KPIs Principales -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 border-t-4 border-t-teal-500 dark:border-t-teal-700 p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Productos</p>
-                    <p class="text-3xl font-bold text-teal-600 dark:text-teal-400 mt-2">{{ total_productos }}</p>
-                </div>
-                <svg class="w-10 h-10 text-teal-200 dark:text-teal-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-            </div>
+    <form method="get" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-6 items-end">
+        <div>
+            <label for="desde" class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Desde</label>
+            <input id="desde" name="desde" type="date" value="{{ fecha_desde }}">
         </div>
-
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 border-t-4 border-t-blue-500 dark:border-t-blue-600 p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Valor Inventario</p>
-                    <p class="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-2">COP {{ valor_inventario|floatformat:0 }}</p>
-                </div>
-                <svg class="w-10 h-10 text-blue-200 dark:text-blue-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            </div>
+        <div>
+            <label for="hasta" class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Hasta</label>
+            <input id="hasta" name="hasta" type="date" value="{{ fecha_hasta }}">
         </div>
-
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 border-t-4 border-t-orange-500 dark:border-t-orange-600 p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Stock Bajo</p>
-                    <p class="text-3xl font-bold text-orange-600 dark:text-orange-400 mt-2">{{ productos_stock_bajo }}</p>
-                    <p class="text-xs text-orange-500 mt-1">Requiere atención</p>
-                </div>
-                <svg class="w-10 h-10 text-orange-200 dark:text-orange-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.068 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
-            </div>
+        <div>
+            <label for="grouping" class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Agrupar</label>
+            <select id="grouping" name="grouping">
+                <option value="dia" {% if grouping == 'dia' %}selected{% endif %}>Día</option>
+                <option value="semana" {% if grouping == 'semana' %}selected{% endif %}>Semana</option>
+                <option value="mes" {% if grouping == 'mes' %}selected{% endif %}>Mes</option>
+                <option value="ano" {% if grouping == 'ano' %}selected{% endif %}>Año</option>
+            </select>
         </div>
-
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 border-t-4 border-t-green-500 dark:border-t-green-600 p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Movimientos Hoy</p>
-                    <p class="text-3xl font-bold text-green-600 dark:text-green-400 mt-2">{{ movimientos_hoy }}</p>
-                    <p class="text-xs text-green-500 mt-1">Actividad actual</p>
-                </div>
-                <svg class="w-10 h-10 text-green-200 dark:text-green-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
-            </div>
+        <div>
+            <label for="categoria" class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Categoría</label>
+            <select id="categoria" name="categoria">
+                <option value="">Todas</option>
+                {% for cat in categorias %}
+                <option value="{{ cat.pk }}" {% if filtro_categoria == cat.pk|stringformat:"d" %}selected{% endif %}>{{ cat.nombre }}</option>
+                {% endfor %}
+            </select>
         </div>
-    </div>
-
-    <!-- Sección de Alertas y Resumen del Rango en Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <!-- Tabla de Alertas: Stock Crítico -->
-        <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-200">Productos con Stock Crítico</h2>
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">{{ productos_stock_bajo }} críticos</span>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead>
-                        <tr class="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
-                            <th class="pb-3 pr-4">Producto</th>
-                            <th class="pb-3 pr-4">Stock Actual</th>
-                            <th class="pb-3 pr-4">Stock Mínimo</th>
-                            <th class="pb-3">Acción</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                        {% for producto in productos_criticos %}
-                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
-                            <td class="py-3 pr-4 font-medium text-gray-800 dark:text-gray-200">{{ producto.nombre }}</td>
-                            <td class="py-3 pr-4"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">{{ producto.stock }}</span></td>
-                            <td class="py-3 pr-4 text-gray-600 dark:text-gray-400">{{ producto.stock_minimo }}</td>
-                            <td class="py-3">
-                                <a href="{% url 'inventario:crear_movimiento' %}?producto={{ producto.pk }}" class="text-xs font-medium text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-300 transition">+ Entrada</a>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="4" class="py-8 text-center text-gray-400 dark:text-gray-500">
-                                <svg class="w-8 h-8 mx-auto mb-2 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                Todo el inventario está en orden
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+        <div>
+            <label for="forma_pago" class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Forma de Pago</label>
+            <select id="forma_pago" name="forma_pago">
+                <option value="">Todas</option>
+                {% for val, label in formas_pago %}
+                <option value="{{ val }}" {% if filtro_forma_pago == val %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
         </div>
-
-        <!-- Resumen del rango -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 border-t-4 border-t-teal-500 dark:border-t-teal-700 p-6">
-            <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-4">Resumen del Período</h3>
-            <div class="space-y-4">
-                <div class="p-4 bg-teal-50 dark:bg-teal-900/20 rounded-lg border border-teal-200 dark:border-teal-800">
-                    <p class="text-xs text-teal-600 dark:text-teal-400 uppercase font-semibold tracking-wide">Rango Seleccionado</p>
-                    <p class="text-lg font-bold text-teal-800 dark:text-teal-200 mt-2">{{ rango_label }}</p>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
-                        <p class="text-xs text-indigo-600 dark:text-indigo-400 uppercase font-semibold tracking-wide">Total Movimientos</p>
-                        <p class="text-2xl font-bold text-indigo-700 dark:text-indigo-300 mt-2">{{ total_movimientos_rango }}</p>
-                    </div>
-                    <div class="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
-                        <p class="text-xs text-emerald-600 dark:text-emerald-400 uppercase font-semibold tracking-wide">Entradas</p>
-                        <p class="text-2xl font-bold text-emerald-700 dark:text-emerald-300 mt-2">{{ total_entradas_rango }}</p>
-                    </div>
-                    <div class="p-4 bg-rose-50 dark:bg-rose-900/20 rounded-lg border border-rose-200 dark:border-rose-800 col-span-2">
-                        <p class="text-xs text-rose-600 dark:text-rose-400 uppercase font-semibold tracking-wide">Salidas</p>
-                        <p class="text-2xl font-bold text-rose-700 dark:text-rose-300 mt-2">{{ total_salidas_rango }}</p>
-                    </div>
-                </div>
-            </div>
+        <div>
+            <button type="submit" class="btn-primary w-full">Analizar</button>
         </div>
-    </div>
+    </form>
+</div>
 
-    <!-- Análisis de Tendencias -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
-        <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-4">
-            Tendencia 
-            {% if grouping == 'semana' %}
-                Semanal
-            {% elif grouping == 'mes' %}
-                Mensual
-            {% elif grouping == 'ano' %}
-                Anual
+<!-- ═══════════════════════════════════════════════════════════════
+     INSIGHTS AUTOMÁTICOS
+     ═══════════════════════════════════════════════════════════════ -->
+{% if insights %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
+    {% for insight in insights %}
+    <div class="flex items-start gap-3 p-4 rounded-xl border
+        {% if insight.tipo == 'success' %}bg-emerald-50 dark:bg-emerald-900/15 border-emerald-200 dark:border-emerald-800
+        {% elif insight.tipo == 'danger' %}bg-rose-50 dark:bg-rose-900/15 border-rose-200 dark:border-rose-800
+        {% elif insight.tipo == 'warning' %}bg-amber-50 dark:bg-amber-900/15 border-amber-200 dark:border-amber-800
+        {% else %}bg-blue-50 dark:bg-blue-900/15 border-blue-200 dark:border-blue-800{% endif %}">
+        <div class="flex-shrink-0 mt-0.5">
+            {% if insight.tipo == 'success' %}
+            <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+            {% elif insight.tipo == 'danger' %}
+            <svg class="w-5 h-5 text-rose-600 dark:text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"/></svg>
+            {% elif insight.tipo == 'warning' %}
+            <svg class="w-5 h-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.068 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
             {% else %}
-                Diaria
+            <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             {% endif %}
-            de Movimientos
-        </h2>
-        <div class="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-lg p-4">
-            <canvas id="movimientosChart" height="80"></canvas>
         </div>
+        <p class="text-sm font-medium
+            {% if insight.tipo == 'success' %}text-emerald-800 dark:text-emerald-300
+            {% elif insight.tipo == 'danger' %}text-rose-800 dark:text-rose-300
+            {% elif insight.tipo == 'warning' %}text-amber-800 dark:text-amber-300
+            {% else %}text-blue-800 dark:text-blue-300{% endif %}">
+            {{ insight.texto }}
+        </p>
     </div>
+    {% endfor %}
+</div>
+{% endif %}
 
-    <!-- Distribución de Productos Vendidos -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
-        <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-4">
-            Distribución de Ventas por Producto
-        </h2>
-        <div class="flex justify-center">
-            <div class="w-full max-w-md bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-lg p-6">
-                <canvas id="productosDistribucionChart" height="80"></canvas>
+<!-- ═══════════════════════════════════════════════════════════════
+     KPIs ANALÍTICOS CON VARIACIÓN
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <!-- Ingresos Totales -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Ingresos Período</p>
+                <p class="text-2xl font-bold text-gray-800 dark:text-white mt-1">COP {{ ingresos_totales|floatformat:0 }}</p>
+                <div class="flex items-center mt-1.5">
+                    {% if cambio_ingresos_pct > 0 %}
+                    <span class="inline-flex items-center text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                        <svg class="w-3.5 h-3.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
+                        +{{ cambio_ingresos_pct }}%
+                    </span>
+                    {% elif cambio_ingresos_pct < 0 %}
+                    <span class="inline-flex items-center text-xs font-semibold text-rose-700 dark:text-rose-400">
+                        <svg class="w-3.5 h-3.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        {{ cambio_ingresos_pct }}%
+                    </span>
+                    {% else %}
+                    <span class="text-xs font-semibold text-gray-400 dark:text-gray-500">= 0%</span>
+                    {% endif %}
+                    <span class="text-xs text-gray-400 dark:text-gray-500 ml-1.5">vs anterior</span>
+                </div>
+            </div>
+            <div class="w-12 h-12 bg-teal-50 dark:bg-teal-900/30 rounded-xl flex items-center justify-center">
+                <svg class="w-6 h-6 text-teal-600 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </div>
         </div>
     </div>
 
-    <!-- Productos Más Vendidos -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8">
-        <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-4">Productos Más Vendidos</h2>
+    <!-- Total Ventas -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Ventas Realizadas</p>
+                <p class="text-3xl font-bold text-gray-800 dark:text-white mt-1">{{ total_ventas_count }}</p>
+                <div class="flex items-center mt-1.5">
+                    {% if cambio_ventas_pct > 0 %}
+                    <span class="inline-flex items-center text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                        <svg class="w-3.5 h-3.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
+                        +{{ cambio_ventas_pct }}%
+                    </span>
+                    {% elif cambio_ventas_pct < 0 %}
+                    <span class="inline-flex items-center text-xs font-semibold text-rose-700 dark:text-rose-400">
+                        <svg class="w-3.5 h-3.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        {{ cambio_ventas_pct }}%
+                    </span>
+                    {% else %}
+                    <span class="text-xs font-semibold text-gray-400 dark:text-gray-500">= 0%</span>
+                    {% endif %}
+                    <span class="text-xs text-gray-400 dark:text-gray-500 ml-1.5">vs {{ prev_ventas_count }} anterior</span>
+                </div>
+            </div>
+            <div class="w-12 h-12 bg-blue-50 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
+                <svg class="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/></svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ticket Promedio -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Ticket Promedio</p>
+                <p class="text-2xl font-bold text-gray-800 dark:text-white mt-1">COP {{ ticket_promedio|floatformat:0 }}</p>
+                <div class="flex items-center mt-1.5">
+                    {% if cambio_ticket_pct > 0 %}
+                    <span class="inline-flex items-center text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                        <svg class="w-3.5 h-3.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
+                        +{{ cambio_ticket_pct }}%
+                    </span>
+                    {% elif cambio_ticket_pct < 0 %}
+                    <span class="inline-flex items-center text-xs font-semibold text-rose-700 dark:text-rose-400">
+                        <svg class="w-3.5 h-3.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        {{ cambio_ticket_pct }}%
+                    </span>
+                    {% else %}
+                    <span class="text-xs font-semibold text-gray-400 dark:text-gray-500">= 0%</span>
+                    {% endif %}
+                    <span class="text-xs text-gray-400 dark:text-gray-500 ml-1.5">vs anterior</span>
+                </div>
+            </div>
+            <div class="w-12 h-12 bg-purple-50 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
+                <svg class="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Margen Estimado -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Margen Estimado</p>
+                <p class="text-2xl font-bold {% if margen_estimado >= 0 %}text-emerald-600 dark:text-emerald-400{% else %}text-rose-600 dark:text-rose-400{% endif %} mt-1">COP {{ margen_estimado|floatformat:0 }}</p>
+                <div class="flex items-center mt-1.5">
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold {% if margen_porcentaje >= 30 %}bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400{% elif margen_porcentaje >= 0 %}bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400{% else %}bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400{% endif %}">
+                        {{ margen_porcentaje }}%
+                    </span>
+                    <span class="text-xs text-gray-400 dark:text-gray-500 ml-1.5">rentabilidad</span>
+                </div>
+            </div>
+            <div class="w-12 h-12 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center">
+                <svg class="w-6 h-6 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- KPIs Secundarios -->
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 text-center">
+        <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Rotación Inv.</p>
+        <p class="text-xl font-bold text-gray-800 dark:text-white mt-1">{{ rotacion_inventario }}x</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 text-center">
+        <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Días Inventario</p>
+        <p class="text-xl font-bold text-gray-800 dark:text-white mt-1">{{ dias_inventario }}</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 text-center">
+        <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Entradas</p>
+        <p class="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{{ total_entradas_rango }}</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 text-center">
+        <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Salidas</p>
+        <p class="text-xl font-bold text-rose-600 dark:text-rose-400 mt-1">{{ total_salidas_rango }}</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 text-center">
+        <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Top Producto</p>
+        <p class="text-sm font-bold text-gray-800 dark:text-white mt-1 truncate" title="{{ top_producto_ingresos }}">{{ top_producto_ingresos }}</p>
+        <p class="text-xs text-teal-600 dark:text-teal-400">{{ top_producto_ingresos_pct }}% ingresos</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 text-center">
+        <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Costo Compras</p>
+        <p class="text-lg font-bold text-gray-800 dark:text-white mt-1">COP {{ costos_compras|floatformat:0 }}</p>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     GRÁFICOS — FILA 1: Evolución de Ventas + Ventas vs Compras
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Evolución de Ventas (Línea) -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-4">Evolución de Ingresos</h3>
+        <div class="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-lg p-4">
+            <canvas id="ventasEvolucionChart" height="90"></canvas>
+        </div>
+    </div>
+
+    <!-- Ventas vs Compras (Barras) -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-4">Ventas vs Compras por Período</h3>
+        <div class="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-lg p-4">
+            <canvas id="ventasVsComprasChart" height="90"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     GRÁFICOS — FILA 2: Categorías Dónut + Top Productos Barras H
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-6">
+    <!-- Distribución por Categoría (Dónut) -->
+    <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-4">Ingresos por Categoría</h3>
+        <div class="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-lg p-4">
+            <canvas id="categoriasChart" height="110"></canvas>
+        </div>
+    </div>
+
+    <!-- Top Productos por Ingresos (Barras Horizontales) -->
+    <div class="lg:col-span-3 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-4">Top 5 Productos por Ingresos</h3>
+        <div class="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-lg p-4">
+            <canvas id="topProductosChart" height="110"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     GRÁFICOS — FILA 3: Entradas vs Salidas + Rotación
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Movimientos: Entradas vs Salidas -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-4">
+            Entradas vs Salidas
+            <span class="text-xs font-normal text-gray-400 dark:text-gray-500 ml-1">
+                ({% if grouping == 'semana' %}semanal{% elif grouping == 'mes' %}mensual{% elif grouping == 'ano' %}anual{% else %}diario{% endif %})
+            </span>
+        </h3>
+        <div class="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-lg p-4">
+            <canvas id="movimientosChart" height="90"></canvas>
+        </div>
+    </div>
+
+    <!-- Rotación: Vendido vs Stock Actual -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-4">Vendido vs Stock Actual</h3>
+        <div class="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-lg p-4">
+            <canvas id="rotacionChart" height="90"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TABLAS ANALÍTICAS — FILA 1: Ranking Categorías + Top Productos
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Ranking de Categorías -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-4">Ranking de Categorías</h3>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead>
                     <tr class="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
-                        <th class="pb-3 pr-4 w-12 text-center">Pos</th>
+                        <th class="pb-3 pr-4">Categoría</th>
+                        <th class="pb-3 pr-4 text-right">Ingresos</th>
+                        <th class="pb-3 pr-4 text-right">Uds</th>
+                        <th class="pb-3 text-right">%</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                    {% for cat in categorias_ranking %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                        <td class="py-3 pr-4 font-medium text-gray-800 dark:text-gray-200">{{ cat.nombre }}</td>
+                        <td class="py-3 pr-4 text-right text-gray-600 dark:text-gray-400">COP {{ cat.ingresos|floatformat:0 }}</td>
+                        <td class="py-3 pr-4 text-right text-gray-600 dark:text-gray-400">{{ cat.qty }}</td>
+                        <td class="py-3 text-right">
+                            <div class="flex items-center justify-end gap-2">
+                                <div class="w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                                    <div class="bg-teal-500 dark:bg-teal-400 h-1.5 rounded-full" style="width: {{ cat.porcentaje }}%"></div>
+                                </div>
+                                <span class="text-xs font-semibold text-gray-600 dark:text-gray-400 w-10 text-right">{{ cat.porcentaje }}%</span>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="py-8 text-center text-gray-400 dark:text-gray-500">Sin datos de ventas por categoría</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Top Productos por Volumen -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-4">Top Productos por Volumen</h3>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
+                        <th class="pb-3 pr-4 w-10">#</th>
                         <th class="pb-3 pr-4">Producto</th>
                         <th class="pb-3 pr-4">Categoría</th>
-                        <th class="pb-3 text-center">Vendidas</th>
+                        <th class="pb-3 text-right">Uds Vendidas</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                     {% for producto in productos_mas_vendidos %}
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
                         <td class="py-3 pr-4 text-center">
-                            {% if forloop.counter == 1 %}
-                                <span class="text-2xl">🥇</span>
-                            {% elif forloop.counter == 2 %}
-                                <span class="text-2xl">🥈</span>
-                            {% elif forloop.counter == 3 %}
-                                <span class="text-2xl">🥉</span>
+                            {% if forloop.counter <= 3 %}
+                            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400">{{ forloop.counter }}</span>
                             {% else %}
-                                <span class="inline-flex items-center justify-center bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-semibold rounded-full w-7 h-7 text-sm">#{{ forloop.counter }}</span>
+                            <span class="text-xs text-gray-400">{{ forloop.counter }}</span>
                             {% endif %}
                         </td>
                         <td class="py-3 pr-4">
-                            <a href="{% url 'inventario:detalle_producto' producto.pk %}" class="text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 font-medium transition">{{ producto.nombre }}</a>
+                            <a href="{% url 'inventario:detalle_producto' producto.pk %}" class="font-medium text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-300 transition">{{ producto.nombre }}</a>
                         </td>
-                        <td class="py-3 pr-4 text-gray-600 dark:text-gray-400">{{ producto.categoria.nombre|default:"-" }}</td>
-                        <td class="py-3 text-center"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">{{ producto.total_vendido|default:0 }}</span></td>
+                        <td class="py-3 pr-4 text-gray-500 dark:text-gray-400">{{ producto.categoria.nombre|default:"-" }}</td>
+                        <td class="py-3 text-right">
+                            <div class="flex items-center justify-end gap-2">
+                                <div class="w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                                    <div class="bg-blue-500 dark:bg-blue-400 h-1.5 rounded-full" style="width: {{ producto.porcentaje_vendido }}%"></div>
+                                </div>
+                                <span class="text-xs font-semibold text-gray-700 dark:text-gray-300 w-8 text-right">{{ producto.total_vendido }}</span>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="py-8 text-center text-gray-400 dark:text-gray-500">Sin datos de productos vendidos</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TABLAS ANALÍTICAS — FILA 2: Capital Muerto + Baja Rotación
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Capital Muerto -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 border-t-4 border-t-rose-500 dark:border-t-rose-600 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">Capital Muerto</h3>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400">Sin ventas en período</span>
+        </div>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Productos con stock pero sin salidas — dinero inmovilizado</p>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
+                        <th class="pb-3 pr-4">Producto</th>
+                        <th class="pb-3 pr-4 text-right">Stock</th>
+                        <th class="pb-3 text-right">Valor Retenido</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                    {% for p in productos_capital_muerto %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                        <td class="py-2.5 pr-4">
+                            <a href="{% url 'inventario:detalle_producto' p.pk %}" class="font-medium text-gray-800 dark:text-gray-200 hover:text-teal-600 dark:hover:text-teal-400 transition">{{ p.nombre }}</a>
+                        </td>
+                        <td class="py-2.5 pr-4 text-right text-gray-600 dark:text-gray-400">{{ p.stock }}</td>
+                        <td class="py-2.5 text-right">
+                            <span class="text-xs font-semibold text-rose-700 dark:text-rose-400">COP {{ p.valor_retenido|floatformat:0 }}</span>
+                        </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="4" class="py-8 text-center text-gray-400 dark:text-gray-500">
-                            <svg class="w-8 h-8 mx-auto mb-2 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
-                            No hay datos de ventas disponibles
+                        <td colspan="3" class="py-6 text-center text-gray-400 dark:text-gray-500">
+                            <svg class="w-7 h-7 mx-auto mb-1.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            Todo el inventario tiene rotación
                         </td>
                     </tr>
                     {% endfor %}
@@ -228,180 +431,339 @@
         </div>
     </div>
 
-<!-- Script para el gráfico con Chart.js -->
+    <!-- Baja Rotación -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 border-t-4 border-t-amber-500 dark:border-t-amber-600 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">Productos con Menor Rotación</h3>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">Bajo movimiento</span>
+        </div>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Productos que menos se venden — posible sobrestock</p>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
+                        <th class="pb-3 pr-4">Producto</th>
+                        <th class="pb-3 pr-4 text-right">Stock</th>
+                        <th class="pb-3 text-right">Salidas</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                    {% for p in productos_baja_rotacion %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                        <td class="py-2.5 pr-4">
+                            <a href="{% url 'inventario:detalle_producto' p.pk %}" class="font-medium text-gray-800 dark:text-gray-200 hover:text-teal-600 dark:hover:text-teal-400 transition">{{ p.nombre }}</a>
+                        </td>
+                        <td class="py-2.5 pr-4 text-right text-gray-600 dark:text-gray-400">{{ p.stock }}</td>
+                        <td class="py-2.5 text-right">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold {% if p.total_salidas == 0 %}bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400{% else %}bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400{% endif %}">
+                                {{ p.total_salidas }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="py-6 text-center text-gray-400 dark:text-gray-500">Todos los productos tienen buena rotación</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TABLAS ANALÍTICAS — FILA 3: Clientes Destacados + Sin Movimiento
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <!-- Clientes Destacados -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-4">Clientes Destacados</h3>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
+                        <th class="pb-3 pr-4">Cliente</th>
+                        <th class="pb-3 pr-4 text-right">Compras</th>
+                        <th class="pb-3 pr-4 text-right">Total Gastado</th>
+                        <th class="pb-3 text-right">Ticket Prom.</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                    {% for c in clientes_destacados %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                        <td class="py-2.5 pr-4 font-medium text-gray-800 dark:text-gray-200">{{ c.cliente_nombre }}</td>
+                        <td class="py-2.5 pr-4 text-right text-gray-600 dark:text-gray-400">{{ c.total_compras }}</td>
+                        <td class="py-2.5 pr-4 text-right font-medium text-gray-800 dark:text-gray-200">COP {{ c.total_gastado|floatformat:0 }}</td>
+                        <td class="py-2.5 text-right text-gray-500 dark:text-gray-400">COP {{ c.ticket_avg|floatformat:0 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="py-6 text-center text-gray-400 dark:text-gray-500">Sin datos de clientes</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Productos Sin Movimiento -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">Productos Sin Movimiento</h3>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">En el período</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
+                        <th class="pb-3 pr-4">Producto</th>
+                        <th class="pb-3 pr-4">Categoría</th>
+                        <th class="pb-3 text-right">Stock Actual</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                    {% for p in productos_sin_movimiento %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                        <td class="py-2.5 pr-4">
+                            <a href="{% url 'inventario:detalle_producto' p.pk %}" class="font-medium text-gray-800 dark:text-gray-200 hover:text-teal-600 dark:hover:text-teal-400 transition">{{ p.nombre }}</a>
+                        </td>
+                        <td class="py-2.5 pr-4 text-gray-500 dark:text-gray-400">{{ p.categoria.nombre|default:"-" }}</td>
+                        <td class="py-2.5 text-right">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">{{ p.stock }}</span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="py-6 text-center text-gray-400 dark:text-gray-500">
+                            <svg class="w-7 h-7 mx-auto mb-1.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            Todos los productos tuvieron movimiento
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     CHART.JS SCRIPTS
+     ═══════════════════════════════════════════════════════════════ -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const ctx = document.getElementById('movimientosChart').getContext('2d');
-        const movimientos = {{ movimientos_por_mes|safe }};
-        
-        const labels = movimientos.map(item => item.mes);
-        const entradas = movimientos.map(item => item.entradas);
-        const salidas = movimientos.map(item => item.salidas);
-        
-        new Chart(ctx, {
-            type: 'bar',
+document.addEventListener('DOMContentLoaded', function() {
+    const isDark = document.documentElement.classList.contains('dark');
+    const gridColor = isDark ? 'rgba(71,85,105,0.3)' : '#e2e8f0';
+    const textColor = isDark ? '#94a3b8' : '#64748b';
+
+    const commonScaleOpts = {
+        ticks: { color: textColor, font: { size: 11 } },
+        grid: { color: gridColor, drawBorder: false }
+    };
+    const commonLegend = {
+        labels: { color: textColor, font: { size: 12, weight: '500' }, padding: 12, usePointStyle: true }
+    };
+    const commonTooltip = {
+        backgroundColor: isDark ? '#1e293b' : 'rgba(0,0,0,0.85)',
+        titleColor: '#fff', bodyColor: '#fff',
+        borderColor: '#0f766e', borderWidth: 1, padding: 10
+    };
+
+    // ── 1. Evolución de Ventas (Línea) ──
+    const ventasData = {{ ventas_evolucion_json|safe }};
+    if (ventasData.length) {
+        new Chart(document.getElementById('ventasEvolucionChart').getContext('2d'), {
+            type: 'line',
             data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'Entradas',
-                        data: entradas,
-                        backgroundColor: 'rgba(59, 130, 246, 0.7)',
-                        borderColor: 'rgba(59, 130, 246, 1)',
-                        borderWidth: 2,
-                        borderRadius: 6
-                    },
-                    {
-                        label: 'Salidas',
-                        data: salidas,
-                        backgroundColor: 'rgba(239, 68, 68, 0.7)',
-                        borderColor: 'rgba(239, 68, 68, 1)',
-                        borderWidth: 2,
-                        borderRadius: 6
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'top',
-                        labels: {
-                            color: '#64748b',
-                            font: {
-                                size: 13,
-                                weight: '500'
-                            },
-                            padding: 15,
-                            usePointStyle: true
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: '#0f766e',
-                        borderWidth: 1,
-                        padding: 12,
-                        displayColors: true,
-                        callbacks: {
-                            label: function(context) {
-                                return context.dataset.label + ': ' + context.parsed.y + ' unidades';
-                            }
-                        }
-                    }
-                },
-                interaction: {
-                    mode: 'index',
-                    intersect: false
-                },
-                scales: {
-                    x: {
-                        title: {
-                            display: true,
-                            text: 'Día',
-                            color: '#64748b',
-                            font: { size: 13, weight: '500' }
-                        },
-                        ticks: {
-                            color: '#64748b',
-                            font: { size: 12 }
-                        },
-                        grid: {
-                            color: '#e2e8f0',
-                            drawBorder: false
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Movimientos',
-                            color: '#64748b',
-                            font: { size: 13, weight: '500' }
-                        },
-                        ticks: {
-                            stepSize: 1,
-                            color: '#64748b',
-                            font: { size: 12 }
-                        },
-                        grid: {
-                            color: '#e2e8f0',
-                            drawBorder: false
-                        }
-                    }
-                }
-            }
-        });
-
-        // Gráfico de Dónut - Distribución de Productos Vendidos
-        const ctxDonut = document.getElementById('productosDistribucionChart').getContext('2d');
-        const productosData = {{ productos_donut_json|safe }};
-        
-        const colores = [
-            'rgba(239, 68, 68, 0.8)',    // Rojo
-            'rgba(59, 130, 246, 0.8)',   // Azul
-            'rgba(34, 197, 94, 0.8)',    // Verde
-            'rgba(250, 204, 21, 0.8)',   // Amarillo
-            'rgba(139, 92, 246, 0.8)',   // Púrpura
-            'rgba(14, 165, 233, 0.8)',   // Cian
-            'rgba(248, 113, 113, 0.8)',  // Rojo claro
-            'rgba(251, 146, 60, 0.8)',   // Naranja
-            'rgba(168, 85, 247, 0.8)',   // Violeta
-            'rgba(6, 182, 212, 0.8)'     // Turquesa
-        ];
-
-        const bordeColores = colores.map(c => c.replace('0.8', '1'));
-
-        new Chart(ctxDonut, {
-            type: 'doughnut',
-            data: {
-                labels: productosData.map(p => p.nombre),
+                labels: ventasData.map(i => i.label),
                 datasets: [{
-                    data: productosData.map(p => p.total_vendido),
-                    backgroundColor: colores.slice(0, productosData.length),
-                    borderColor: bordeColores.slice(0, productosData.length),
+                    label: 'Ingresos (COP)',
+                    data: ventasData.map(i => i.total),
+                    borderColor: '#0d9488',
+                    backgroundColor: 'rgba(13,148,136,0.1)',
+                    borderWidth: 2.5,
+                    fill: true,
+                    tension: 0.35,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#0d9488'
+                }, {
+                    label: 'Nro. Ventas',
+                    data: ventasData.map(i => i.cantidad),
+                    borderColor: '#6366f1',
+                    backgroundColor: 'rgba(99,102,241,0.08)',
                     borderWidth: 2,
-                    borderRadius: 4
+                    fill: false,
+                    tension: 0.35,
+                    pointRadius: 2,
+                    pointBackgroundColor: '#6366f1',
+                    yAxisID: 'y1'
                 }]
             },
             options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'right',
-                        labels: {
-                            color: '#64748b',
-                            font: {
-                                size: 12,
-                                weight: '500'
-                            },
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: '#0f766e',
-                        borderWidth: 1,
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
-                            }
-                        }
-                    }
+                responsive: true, maintainAspectRatio: true,
+                plugins: { legend: commonLegend, tooltip: commonTooltip },
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    x: commonScaleOpts,
+                    y: { ...commonScaleOpts, beginAtZero: true, title: { display: true, text: 'COP', color: textColor, font: { size: 11 } } },
+                    y1: { ...commonScaleOpts, position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, title: { display: true, text: 'Ventas', color: textColor, font: { size: 11 } } }
                 }
             }
         });
-    });
+    }
+
+    // ── 2. Ventas vs Compras (Barras) ──
+    const vvcData = {{ ventas_vs_compras_json|safe }};
+    if (vvcData.length) {
+        new Chart(document.getElementById('ventasVsComprasChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: vvcData.map(i => i.label),
+                datasets: [{
+                    label: 'Ventas',
+                    data: vvcData.map(i => i.ventas),
+                    backgroundColor: 'rgba(16,185,129,0.7)',
+                    borderColor: 'rgba(16,185,129,1)',
+                    borderWidth: 2, borderRadius: 5
+                }, {
+                    label: 'Compras',
+                    data: vvcData.map(i => i.compras),
+                    backgroundColor: 'rgba(239,68,68,0.7)',
+                    borderColor: 'rgba(239,68,68,1)',
+                    borderWidth: 2, borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: true,
+                plugins: { legend: commonLegend, tooltip: { ...commonTooltip, callbacks: { label: ctx => ctx.dataset.label + ': COP ' + ctx.parsed.y.toLocaleString() } } },
+                interaction: { mode: 'index', intersect: false },
+                scales: { x: commonScaleOpts, y: { ...commonScaleOpts, beginAtZero: true } }
+            }
+        });
+    }
+
+    // ── 3. Distribución por Categoría (Dónut) ──
+    const catData = {{ categorias_dist_json|safe }};
+    const paleta = ['#0d9488','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#6366f1'];
+    if (catData.length) {
+        new Chart(document.getElementById('categoriasChart').getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: catData.map(c => c.nombre),
+                datasets: [{
+                    data: catData.map(c => c.total),
+                    backgroundColor: paleta.slice(0, catData.length),
+                    borderColor: isDark ? '#1f2937' : '#ffffff',
+                    borderWidth: 3, borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: true,
+                cutout: '60%',
+                plugins: {
+                    legend: { position: 'right', labels: { ...commonLegend.labels, pointStyle: 'circle' } },
+                    tooltip: { ...commonTooltip, callbacks: {
+                        label: ctx => {
+                            const t = ctx.dataset.data.reduce((a,b) => a+b, 0);
+                            return ctx.label + ': COP ' + ctx.parsed.toLocaleString() + ' (' + ((ctx.parsed/t)*100).toFixed(1) + '%)';
+                        }
+                    }}
+                }
+            }
+        });
+    }
+
+    // ── 4. Top 5 Productos por Ingresos (Barras Horizontales) ──
+    const topData = {{ top_productos_chart_json|safe }};
+    if (topData.length) {
+        new Chart(document.getElementById('topProductosChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: topData.map(p => p.nombre),
+                datasets: [{
+                    label: 'Ingresos (COP)',
+                    data: topData.map(p => p.revenue),
+                    backgroundColor: paleta.slice(0, topData.length).map(c => c + 'cc'),
+                    borderColor: paleta.slice(0, topData.length),
+                    borderWidth: 2, borderRadius: 5
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true, maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { ...commonTooltip, callbacks: { label: ctx => 'COP ' + ctx.parsed.x.toLocaleString() } }
+                },
+                scales: {
+                    x: { ...commonScaleOpts, beginAtZero: true },
+                    y: { ...commonScaleOpts, ticks: { ...commonScaleOpts.ticks, font: { size: 11 } } }
+                }
+            }
+        });
+    }
+
+    // ── 5. Entradas vs Salidas (Barras agrupadas) ──
+    const movData = {{ movimientos_chart_json|safe }};
+    if (movData.length) {
+        new Chart(document.getElementById('movimientosChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: movData.map(i => i.label),
+                datasets: [{
+                    label: 'Entradas',
+                    data: movData.map(i => i.entradas),
+                    backgroundColor: 'rgba(59,130,246,0.7)',
+                    borderColor: 'rgba(59,130,246,1)',
+                    borderWidth: 2, borderRadius: 5
+                }, {
+                    label: 'Salidas',
+                    data: movData.map(i => i.salidas),
+                    backgroundColor: 'rgba(239,68,68,0.7)',
+                    borderColor: 'rgba(239,68,68,1)',
+                    borderWidth: 2, borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: true,
+                plugins: { legend: commonLegend, tooltip: { ...commonTooltip, callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y + ' uds' } } },
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    x: commonScaleOpts,
+                    y: { ...commonScaleOpts, beginAtZero: true, ticks: { ...commonScaleOpts.ticks, stepSize: 1 } }
+                }
+            }
+        });
+    }
+
+    // ── 6. Rotación: Vendido vs Stock (Barras agrupadas) ──
+    const rotData = {{ rotacion_chart_json|safe }};
+    if (rotData.length) {
+        new Chart(document.getElementById('rotacionChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: rotData.map(r => r.nombre),
+                datasets: [{
+                    label: 'Vendido',
+                    data: rotData.map(r => r.vendido),
+                    backgroundColor: 'rgba(16,185,129,0.7)',
+                    borderColor: 'rgba(16,185,129,1)',
+                    borderWidth: 2, borderRadius: 5
+                }, {
+                    label: 'Stock Actual',
+                    data: rotData.map(r => r.stock),
+                    backgroundColor: 'rgba(99,102,241,0.5)',
+                    borderColor: 'rgba(99,102,241,1)',
+                    borderWidth: 2, borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: true,
+                plugins: { legend: commonLegend, tooltip: commonTooltip },
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    x: { ...commonScaleOpts, ticks: { ...commonScaleOpts.ticks, font: { size: 10 } } },
+                    y: { ...commonScaleOpts, beginAtZero: true }
+                }
+            }
+        });
+    }
+});
 </script>
 {% endblock %}

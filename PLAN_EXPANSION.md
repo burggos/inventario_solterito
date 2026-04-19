@@ -1,65 +1,102 @@
 # Plan de Expansión: Sistema de Ventas y Compras
 
-## Estado Actual
-- ✅ CRUD de productos (crear, editar, eliminar, listar, detalle)
-- ✅ Gestión de inventario con movimientos (entrada/salida/ajuste)
-- ✅ Dashboard de reportes con gráficos Chart.js
-- ✅ UI estandarizada (Tailwind CSS + Dark Mode)
-- ✅ Modelos creados: Proveedor, OrdenCompra, DetalleCompra, Venta, DetalleVenta
-- ✅ Formularios creados: ProveedorForm, OrdenCompraForm, DetalleCompraForm, VentaForm, DetalleVentaForm
-- ✅ Admin registrado para todos los modelos
-- ✅ Migraciones aplicadas
+## Base del Proyecto
 
-## Lo que FALTA implementar
-
-### FASE 1: Vistas + URLs + Templates de Proveedores
-1. `lista_proveedores` - Lista con búsqueda y filtros
-2. `crear_proveedor` - Formulario de creación
-3. `editar_proveedor` - Formulario de edición
-4. `detalle_proveedor` - Detalle con historial de compras
-
-### FASE 2: Vistas + URLs + Templates de Compras
-1. `lista_compras` - Lista de órdenes con filtros por estado/proveedor/fecha
-2. `crear_compra` - Formulario dinámico (AJAX para agregar ítems sin recargar)
-3. `detalle_compra` - Detalle con lista de ítems
-4. `recibir_compra` - Marcar como recibida y actualizar stock automáticamente
-
-### FASE 3: Vistas + URLs + Templates de Ventas
-1. `lista_ventas` - Lista con filtros por estado/fecha/forma de pago
-2. `crear_venta` - Formulario dinámico (AJAX para agregar ítems)
-3. `detalle_venta` - Detalle con lista de ítems
-4. `cancelar_venta` - Cancelar y revertir stock
-
-### FASE 4: API Endpoints (AJAX)
-1. `api_buscar_productos` - Búsqueda por nombre/código para autocompletado
-2. `api_producto_detalle` - Obtener precio y stock de un producto (JSON)
-
-### FASE 5: Integración
-1. Señales para actualizar stock al completar venta/recibir compra
-2. Recálculo automático de totales en órdenes
-3. Actualización del navbar con enlaces a Proveedores, Compras, Ventas
-4. JavaScript dinámico en app.js para agregar ítems a compras/ventas
+- [x] CRUD de productos (crear, editar, eliminar, listar, detalle)
+- [x] Gestión de inventario con movimientos (entrada/salida/ajuste)
+- [x] Dashboard con KPIs, gráficos Chart.js y resumen de actividad
+- [x] UI estandarizada (Tailwind CSS + Dark Mode + CSS personalizado)
+- [x] Autenticación (Login/Logout)
+- [x] Reportes de inventario
+- [x] Migraciones aplicadas
 
 ---
 
-## Arquitectura de URLs
+## FASE 0: Modelos y Configuración
 
-```
-/proveedores/                    -> lista_proveedores
-/proveedores/nuevo/              -> crear_proveedor
-/proveedores/<id>/               -> detalle_proveedor
-/proveedores/<id>/editar/        -> editar_proveedor
+- [x] Modelo `Proveedor` (nombre, email, teléfono, dirección, RUC, términos de pago)
+- [x] Modelo `OrdenCompra` (proveedor, estado, total, número auto-generado)
+- [x] Modelo `DetalleCompra` (orden, producto, cantidad solicitada/recibida, precio, subtotal)
+- [x] Modelo `Venta` (cliente, forma de pago, estado, total, número auto-generado)
+- [x] Modelo `DetalleVenta` (venta, producto, cantidad, precio, descuento, subtotal)
+- [x] Formularios: `ProveedorForm`, `OrdenCompraForm`, `DetalleCompraForm`, `VentaForm`, `DetalleVentaForm`
+- [x] Admin registrado para todos los modelos (Proveedor, OrdenCompra, DetalleCompra, Venta, DetalleVenta)
+- [x] Migraciones generadas y aplicadas
 
-/compras/                        -> lista_compras
-/compras/nueva/                  -> crear_compra
-/compras/<id>/                   -> detalle_compra
-/compras/<id>/recibir/           -> recibir_compra
+---
 
-/ventas/                         -> lista_ventas
-/ventas/nueva/                   -> crear_venta
-/ventas/<id>/                    -> detalle_venta
-/ventas/<id>/cancelar/           -> cancelar_venta
+## FASE 1: Proveedores — Vistas + URLs + Templates
 
-/api/productos/buscar/           -> api_buscar_productos (JSON)
-/api/productos/<id>/             -> api_producto_detalle (JSON)
-```
+- [x] `lista_proveedores` — Lista con búsqueda y filtros
+- [x] `crear_proveedor` — Formulario de creación
+- [x] `editar_proveedor` — Formulario de edición
+- [x] `detalle_proveedor` — Detalle con historial de compras
+- [x] Template `lista_proveedores.html`
+- [x] Template `crear_proveedor.html`
+- [x] Template `editar_proveedor.html`
+- [x] Template `detalle_proveedor.html`
+- [x] URLs registradas (`/proveedores/`, `/proveedores/nuevo/`, `/proveedores/<id>/`, `/proveedores/<id>/editar/`)
+
+---
+
+## FASE 2: Compras — Vistas + URLs + Templates
+
+- [x] `lista_compras` — Lista de órdenes con filtros por estado/proveedor/fecha
+- [x] `crear_compra` — Redirige al POS de compra rápida
+- [x] `detalle_compra` — Detalle con lista de ítems
+- [x] `recibir_compra` — Marcar como recibida y actualizar stock automáticamente
+- [x] Template `lista_compras.html`
+- [x] Template `crear_compra.html`
+- [x] Template `detalle_compra.html`
+- [x] Template `compra_rapida.html` (interfaz POS)
+- [x] URLs registradas (`/compras/`, `/compras/nueva/`, `/compras/<id>/`, `/compras/<id>/recibir/`)
+
+---
+
+## FASE 3: Ventas — Vistas + URLs + Templates
+
+- [x] `lista_ventas` — Lista con filtros por estado/fecha/forma de pago
+- [x] `crear_venta` — Redirige al POS de venta rápida
+- [x] `detalle_venta` — Detalle con lista de ítems
+- [x] `cancelar_venta` — Cancelar y revertir stock
+- [x] Template `lista_ventas.html`
+- [x] Template `crear_venta.html`
+- [x] Template `detalle_venta.html`
+- [x] Template `venta_rapida.html` (interfaz POS)
+- [x] URLs registradas (`/ventas/`, `/ventas/nueva/`, `/ventas/<id>/`, `/ventas/<id>/cancelar/`)
+
+---
+
+## FASE 4: API Endpoints (AJAX)
+
+- [x] `api_buscar_productos` — Búsqueda por nombre/código para autocompletado (JSON)
+- [x] `api_producto_detalle` — Obtener precio y stock de un producto (JSON)
+- [x] `api_pos_venta` — Procesar venta desde POS (JSON, transaccional)
+- [x] `api_pos_compra` — Procesar compra desde POS (JSON, transaccional)
+- [x] URLs registradas (`/api/productos/buscar/`, `/api/productos/<id>/`, `/api/pos/venta/`, `/api/pos/compra/`)
+
+---
+
+## FASE 5: Integración
+
+- [x] Señal `actualizar_stock` en movimientos (entrada/salida con F() expressions atómicas)
+- [x] Creación automática de movimientos al completar venta POS
+- [x] Creación automática de movimientos al completar compra POS
+- [x] Recálculo automático de totales en ventas y órdenes de compra
+- [x] Navbar actualizado con enlaces a Proveedores, Compras, Ventas
+- [x] JavaScript dinámico con `fetch()` en templates POS (venta_rapida, compra_rapida, crear_movimiento)
+- [ ] JavaScript centralizado en `app.js` (actualmente inline en templates)
+
+---
+
+## Posibles Mejoras Futuras
+
+- [ ] Extraer JavaScript inline de templates POS a `static/js/app.js`
+- [ ] Agregar paginación a listas de compras y ventas
+- [ ] Dashboard: gráficos de ventas por período y forma de pago
+- [ ] Exportación de reportes a PDF/Excel
+- [ ] Gestión de usuarios con roles y permisos
+- [ ] Notificaciones de stock bajo por email
+- [ ] Soporte multi-sucursal
+- [ ] Código de barras: escaneo desde cámara en POS
+- [ ] Historial de precios por producto

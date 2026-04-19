@@ -202,7 +202,7 @@ class NoError500ViewTests(TestCase):
         url = reverse('inventario:reportes') + f'?desde={desde}&hasta={hoy}'
         response = self.client.get(url)
         self.assertNot500(response, url)
-        self.assertContains(response, 'Dashboard de Reportes')
+        self.assertContains(response, 'Inteligencia de Negocio')
 
     def test_post_crear_producto_invalid_does_not_return_500(self):
         data = {
