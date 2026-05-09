@@ -11,6 +11,9 @@
             <p class="text-gray-500 dark:text-gray-400 mt-1">Detalle de la venta</p>
         </div>
         <div class="flex space-x-2">
+            <a href="{% url 'inventario:venta_pdf' venta.pk %}" target="_blank" class="inline-flex items-center justify-center bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white font-semibold text-sm px-4 py-2 rounded-lg shadow-sm transition">
+                Ver PDF
+            </a>
             {% if venta.estado != 'cancelada' %}
             <form method="post" action="{% url 'inventario:cancelar_venta' venta.pk %}" class="inline">
                 {% csrf_token %}
@@ -92,6 +95,14 @@
                     {% endfor %}
                 </tbody>
                 <tfoot>
+                    <tr>
+                        <td colspan="4" class="py-3 pr-4 text-right font-bold text-gray-900 dark:text-gray-100">SUBTOTAL:</td>
+                        <td class="py-3 text-right font-bold text-gray-900 dark:text-gray-100">COP {{ venta.subtotal|floatformat:0 }}</td>
+                    </tr>
+                    <tr>
+                        <td colspan="4" class="py-3 pr-4 text-right font-bold text-gray-900 dark:text-gray-100">DESCUENTO:</td>
+                        <td class="py-3 text-right font-bold text-amber-600 dark:text-amber-400">COP {{ venta.descuento_total|floatformat:0 }}</td>
+                    </tr>
                     <tr class="border-t-2 border-gray-200 dark:border-gray-600">
                         <td colspan="4" class="py-3 pr-4 text-right font-bold text-gray-900 dark:text-gray-100">TOTAL:</td>
                         <td class="py-3 text-right font-bold text-green-600 dark:text-green-400">COP {{ venta.total|floatformat:0 }}</td>

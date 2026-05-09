@@ -1,8 +1,18 @@
 import os
 import sys
 from pathlib import Path
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def _get_bool_env(name, default=False):
+    return os.environ.get(name, str(default)).lower() in ('true', '1', 'yes', 'on')
+
+
+def _get_list_env(name, default=''):
+    raw = os.environ.get(name, default)
+    return [item.strip() for item in raw.split(',') if item.strip()]
 
 # Redirecciones de autenticación
 LOGIN_URL = 'login'
@@ -12,23 +22,23 @@ LOGOUT_REDIRECT_URL = 'login'
 
 sys.path.append(str(BASE_DIR / 'apps'))
 
-# SECRET_KEY: en producción se lee de variable de entorno
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'j0)6hp%=z0+y6e^t5ip#h@#$jnfy+kd#2d^v%=dg4t3u0h2s2#')
+# Entorno
+DJANGO_ENV = os.environ.get('DJANGO_ENV', 'development').lower()
+IS_PRODUCTION = DJANGO_ENV == 'production'
 
-# DEBUG: False en producción
-DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
+# SECRET_KEY
+if IS_PRODUCTION and not os.environ.get('DJANGO_SECRET_KEY'):
+    raise ImproperlyConfigured('Define DJANGO_SECRET_KEY en producción.')
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'dev-only-insecure-secret-key-change-me')
 
-ALLOWED_HOSTS = [
-    '127.0.0.1',
-    'localhost',
-    '0.0.0.0',
-    'testserver',
-    '.pythonanywhere.com',
-]
+# DEBUG
+DEBUG = _get_bool_env('DJANGO_DEBUG', default=not IS_PRODUCTION)
 
-CSRF_TRUSTED_ORIGINS = [
-    'https://*.pythonanywhere.com',
-]
+default_hosts = '127.0.0.1,localhost,0.0.0.0,testserver,.pythonanywhere.com'
+ALLOWED_HOSTS = _get_list_env('DJANGO_ALLOWED_HOSTS', default=default_hosts)
+
+default_csrf_origins = 'https://*.pythonanywhere.com'
+CSRF_TRUSTED_ORIGINS = _get_list_env('DJANGO_CSRF_TRUSTED_ORIGINS', default=default_csrf_origins)
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -70,13 +80,26 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'solterito_inventario.wsgi.application'
 
-# Base de datos — SQLite (funciona en PythonAnywhere)
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# Base de datos
+DB_ENGINE = os.environ.get('DJANGO_DB_ENGINE', 'sqlite').lower()
+if DB_ENGINE == 'postgres':
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('DJANGO_DB_NAME', ''),
+            'USER': os.environ.get('DJANGO_DB_USER', ''),
+            'PASSWORD': os.environ.get('DJANGO_DB_PASSWORD', ''),
+            'HOST': os.environ.get('DJANGO_DB_HOST', 'localhost'),
+            'PORT': os.environ.get('DJANGO_DB_PORT', '5432'),
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -98,3 +121,18 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# Seguridad de despliegue (solo producción)
+if IS_PRODUCTION:
+    SECURE_HSTS_SECONDS = int(os.environ.get('DJANGO_SECURE_HSTS_SECONDS', '31536000'))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = _get_bool_env('DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS', default=True)
+    SECURE_HSTS_PRELOAD = _get_bool_env('DJANGO_SECURE_HSTS_PRELOAD', default=True)
+    SECURE_SSL_REDIRECT = _get_bool_env('DJANGO_SECURE_SSL_REDIRECT', default=True)
+    SESSION_COOKIE_SECURE = _get_bool_env('DJANGO_SESSION_COOKIE_SECURE', default=True)
+    CSRF_COOKIE_SECURE = _get_bool_env('DJANGO_CSRF_COOKIE_SECURE', default=True)
+    SECURE_REFERRER_POLICY = os.environ.get('DJANGO_SECURE_REFERRER_POLICY', 'same-origin')
+
+    # Necesario cuando hay proxy (ej. PythonAnywhere / reverse proxy)
+    if _get_bool_env('DJANGO_USE_X_FORWARDED_PROTO', default=True):
+        SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

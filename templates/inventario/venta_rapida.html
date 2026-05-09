@@ -58,8 +58,21 @@
         <div class="card p-4 space-y-3">
             <div>
                 <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Cliente</label>
+                <select id="cliente-select" class="w-full px-3 py-2 mb-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 dark:bg-gray-700 dark:text-white transition">
+                    <option value="">Cliente General</option>
+                    {% for c in clientes %}
+                    <option value="{{ c.pk }}">{{ c.nombre }}</option>
+                    {% endfor %}
+                </select>
                 <input type="text" id="cliente-nombre" value="Cliente General"
                     class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 dark:bg-gray-700 dark:text-white transition">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Descuento manual (%)</label>
+                <input type="number" id="descuento-manual" value="0" min="0" max="100" step="0.01"
+                    class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 dark:bg-gray-700 dark:text-white transition"
+                    placeholder="0.00">
+                <p class="text-[11px] text-gray-400 mt-1">Se suma al descuento del cliente y se limita a 100%.</p>
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Forma de Pago</label>
@@ -100,6 +113,18 @@
                 <div class="flex justify-between text-sm">
                     <span class="text-gray-500 dark:text-gray-400">Subtotal</span>
                     <span id="summary-subtotal" class="font-medium text-gray-800 dark:text-white">COP 0</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span class="text-gray-500 dark:text-gray-400">Descuento</span>
+                    <span id="summary-discount" class="font-medium text-gray-800 dark:text-white">COP 0</span>
+                </div>
+                <div class="flex justify-between text-xs">
+                    <span class="text-gray-500 dark:text-gray-400">% aplicado</span>
+                    <span id="summary-discount-percent" class="font-medium text-gray-800 dark:text-white">0%</span>
+                </div>
+                <div class="flex justify-between text-xs">
+                    <span class="text-gray-500 dark:text-gray-400">Detalle</span>
+                    <span id="summary-discount-breakdown" class="font-medium text-gray-800 dark:text-white">Cliente 0.00% + Manual 0.00%</span>
                 </div>
             </div>
             <div class="border-t border-gray-200 dark:border-gray-700 pt-3 mb-4">
@@ -143,6 +168,9 @@
 const POS = {
     cart: [],
     selectedPayment: 'efectivo',
+    selectedClienteId: null,
+    descuentoClientePorcentaje: 0,
+    descuentoManualPorcentaje: 0,
     searchTimeout: null,
     selectedIdx: -1,
     csrfToken: document.querySelector('[name=csrfmiddlewaretoken]').value,
@@ -164,6 +192,8 @@ const POS = {
         });
         document.getElementById('btn-confirmar').addEventListener('click', () => this.submit());
         document.getElementById('btn-limpiar').addEventListener('click', () => this.clear());
+        document.getElementById('cliente-select').addEventListener('change', e => this.onClienteChange(e.target.value));
+        document.getElementById('descuento-manual').addEventListener('input', e => this.onManualDiscountChange(e.target.value));
         document.addEventListener('keydown', e => this.onGlobalKey(e));
         document.addEventListener('click', e => {
             if (!e.target.closest('#product-search') && !e.target.closest('#search-results')) {
@@ -305,6 +335,41 @@ const POS = {
         );
     },
 
+    async onClienteChange(clienteId) {
+        this.selectedClienteId = clienteId || null;
+        if (!clienteId) {
+            this.descuentoClientePorcentaje = 0;
+            document.getElementById('cliente-nombre').value = 'Cliente General';
+            this.updateUI();
+            return;
+        }
+        try {
+            const res = await fetch(`{% url 'inventario:api_cliente_descuento' 0 %}`.replace('/0/', `/${clienteId}/`));
+            const data = await res.json();
+            this.descuentoClientePorcentaje = parseFloat(data.descuento_porcentaje || 0);
+            document.getElementById('cliente-nombre').value = data.nombre || 'Cliente General';
+            this.updateUI();
+        } catch (e) {
+            this.descuentoClientePorcentaje = 0;
+            this.updateUI();
+        }
+    },
+
+    onManualDiscountChange(value) {
+        let parsed = parseFloat(value);
+        if (Number.isNaN(parsed)) {
+            parsed = 0;
+        }
+        parsed = Math.max(0, Math.min(parsed, 100));
+        this.descuentoManualPorcentaje = parsed;
+        document.getElementById('descuento-manual').value = parsed;
+        this.updateUI();
+    },
+
+    getDescuentoPorcentajeTotal() {
+        return Math.min(this.descuentoClientePorcentaje + this.descuentoManualPorcentaje, 100);
+    },
+
     // --- UI ---
     getTotal() { return this.cart.reduce((s, i) => s + i.precio * i.qty, 0); },
     getTotalQty() { return this.cart.reduce((s, i) => s + i.qty, 0); },
@@ -312,7 +377,10 @@ const POS = {
     updateUI() {
         const body = document.getElementById('cart-body');
         const empty = document.getElementById('empty-cart');
-        const total = this.getTotal();
+        const subtotal = this.getTotal();
+        const descuentoPorcentajeTotal = this.getDescuentoPorcentajeTotal();
+        const descuento = subtotal * (descuentoPorcentajeTotal / 100);
+        const total = Math.max(subtotal - descuento, 0);
 
         if (!this.cart.length) {
             body.innerHTML = '';
@@ -347,7 +415,10 @@ const POS = {
 
         document.getElementById('cart-count').textContent = `${this.cart.length} item${this.cart.length !== 1 ? 's' : ''}`;
         document.getElementById('summary-items').textContent = this.getTotalQty();
-        document.getElementById('summary-subtotal').textContent = `COP ${this.fmt(total)}`;
+        document.getElementById('summary-subtotal').textContent = `COP ${this.fmt(subtotal)}`;
+        document.getElementById('summary-discount').textContent = `COP ${this.fmt(descuento)}`;
+        document.getElementById('summary-discount-percent').textContent = `${descuentoPorcentajeTotal.toFixed(2)}%`;
+        document.getElementById('summary-discount-breakdown').textContent = `Cliente ${this.descuentoClientePorcentaje.toFixed(2)}% + Manual ${this.descuentoManualPorcentaje.toFixed(2)}%`;
         document.getElementById('summary-total').textContent = `COP ${this.fmt(total)}`;
         document.getElementById('btn-confirmar').disabled = !this.cart.length;
     },
@@ -366,6 +437,8 @@ const POS = {
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.csrfToken },
                 body: JSON.stringify({
                     items: this.cart.map(i => ({ producto_id: i.id, cantidad: i.qty, precio: i.precio })),
+                    cliente_id: this.selectedClienteId,
+                    descuento_manual_porcentaje: this.descuentoManualPorcentaje,
                     cliente: document.getElementById('cliente-nombre').value,
                     forma_pago: this.selectedPayment,
                     notas: document.getElementById('venta-notas').value,
@@ -389,6 +462,11 @@ const POS = {
     clear() {
         this.cart = [];
         this.selectedPayment = 'efectivo';
+        this.selectedClienteId = null;
+        this.descuentoClientePorcentaje = 0;
+        this.descuentoManualPorcentaje = 0;
+        document.getElementById('cliente-select').value = '';
+        document.getElementById('descuento-manual').value = '0';
         document.getElementById('cliente-nombre').value = 'Cliente General';
         document.getElementById('venta-notas').value = '';
         document.querySelectorAll('.payment-btn').forEach(b =>

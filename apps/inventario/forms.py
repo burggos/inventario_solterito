@@ -1,6 +1,5 @@
 from django import forms
 from .models import Movimiento, Producto
-from .models import Producto
 
 class ProductoForm(forms.ModelForm):
     """Form for CREATING products. Includes stock_inicial which routes through Movimiento."""
@@ -123,7 +122,7 @@ class ProductoEditForm(forms.ModelForm):
 # FORMULARIOS PARA VENTAS Y COMPRAS
 # ============================================================================
 
-from .models import Proveedor, OrdenCompra, DetalleCompra, Venta, DetalleVenta
+from .models import Proveedor, Cliente, OrdenCompra, DetalleCompra, Venta, DetalleVenta
 
 
 class ProveedorForm(forms.ModelForm):
@@ -139,6 +138,29 @@ class ProveedorForm(forms.ModelForm):
             'ruc': forms.TextInput(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white'}),
             'contacto_principal': forms.TextInput(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white'}),
             'terminos_pago': forms.Textarea(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white', 'rows': 3}),
+            'activo': forms.CheckboxInput(attrs={'class': 'h-4 w-4'}),
+        }
+
+
+class ClienteForm(forms.ModelForm):
+    class Meta:
+        model = Cliente
+        fields = [
+            'nombre', 'documento', 'email', 'telefono', 'activo',
+            'descuento_fijo', 'descuento_temporal', 'descuento_temporal_inicio',
+            'descuento_temporal_fin', 'descuento_fidelidad', 'umbral_fidelidad',
+        ]
+        widgets = {
+            'nombre': forms.TextInput(attrs={'class': 'w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white'}),
+            'documento': forms.TextInput(attrs={'class': 'w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white'}),
+            'email': forms.EmailInput(attrs={'class': 'w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white'}),
+            'telefono': forms.TextInput(attrs={'class': 'w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white'}),
+            'descuento_fijo': forms.NumberInput(attrs={'class': 'w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white', 'min': 0, 'max': 100, 'step': '0.01'}),
+            'descuento_temporal': forms.NumberInput(attrs={'class': 'w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white', 'min': 0, 'max': 100, 'step': '0.01'}),
+            'descuento_temporal_inicio': forms.DateInput(attrs={'class': 'w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white', 'type': 'date'}),
+            'descuento_temporal_fin': forms.DateInput(attrs={'class': 'w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white', 'type': 'date'}),
+            'descuento_fidelidad': forms.NumberInput(attrs={'class': 'w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white', 'min': 0, 'max': 100, 'step': '0.01'}),
+            'umbral_fidelidad': forms.NumberInput(attrs={'class': 'w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white', 'min': 1}),
             'activo': forms.CheckboxInput(attrs={'class': 'h-4 w-4'}),
         }
 
@@ -169,8 +191,9 @@ class DetalleCompraForm(forms.ModelForm):
 class VentaForm(forms.ModelForm):
     class Meta:
         model = Venta
-        fields = ['cliente_nombre', 'forma_pago', 'estado', 'notas']
+        fields = ['cliente', 'cliente_nombre', 'forma_pago', 'estado', 'notas']
         widgets = {
+            'cliente': forms.Select(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white'}),
             'cliente_nombre': forms.TextInput(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white', 'placeholder': 'Nombre del cliente'}),
             'forma_pago': forms.Select(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white'}),
             'estado': forms.Select(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white'}),

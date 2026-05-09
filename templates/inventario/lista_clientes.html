@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% load role_tags %}
+
+{% block title %}Clientes - El Solterito{% endblock %}
+{% block page_title %}Clientes{% endblock %}
+
+{% block content %}
+<div class="card p-6">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="page-title">Clientes y Descuentos</h2>
+            <p class="page-subtitle">Gestiona clientes, fidelidad y descuentos personalizados.</p>
+        </div>
+        {% if user|has_group:'Administrador' %}
+        <a href="{% url 'inventario:crear_cliente' %}" class="btn-primary">Nuevo Cliente</a>
+        {% endif %}
+    </div>
+
+    <form method="get" class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+        <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Buscar por nombre, documento o email" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white">
+        <select name="activo" class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:text-white">
+            <option value="">Todos</option>
+            <option value="1" {% if request.GET.activo == '1' %}selected{% endif %}>Activos</option>
+            <option value="0" {% if request.GET.activo == '0' %}selected{% endif %}>Inactivos</option>
+        </select>
+        <button type="submit" class="btn-secondary">Filtrar</button>
+    </form>
+
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="table-header">
+                <tr>
+                    <th class="px-4 py-2">Cliente</th>
+                    <th class="px-4 py-2">Documento</th>
+                    <th class="px-4 py-2 text-right">Desc. Fijo</th>
+                    <th class="px-4 py-2 text-right">Desc. Temporal</th>
+                    <th class="px-4 py-2 text-right">Desc. Fidelidad</th>
+                    <th class="px-4 py-2 text-center">Estado</th>
+                    {% if user|has_group:'Administrador' %}
+                    <th class="px-4 py-2 text-center">Acciones</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                {% for cliente in clientes %}
+                <tr class="table-row">
+                    <td class="px-4 py-2">{{ cliente.nombre }}</td>
+                    <td class="px-4 py-2">{{ cliente.documento|default:'-' }}</td>
+                    <td class="px-4 py-2 text-right">{{ cliente.descuento_fijo }}%</td>
+                    <td class="px-4 py-2 text-right">{{ cliente.descuento_temporal }}%</td>
+                    <td class="px-4 py-2 text-right">{{ cliente.descuento_fidelidad }}%</td>
+                    <td class="px-4 py-2 text-center">{% if cliente.activo %}<span class="badge-success">Activo</span>{% else %}<span class="badge-danger">Inactivo</span>{% endif %}</td>
+                    {% if user|has_group:'Administrador' %}
+                    <td class="px-4 py-2 text-center"><a href="{% url 'inventario:editar_cliente' cliente.pk %}" class="btn-info">Editar</a></td>
+                    {% endif %}
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="py-8 text-center text-gray-400">No hay clientes registrados.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

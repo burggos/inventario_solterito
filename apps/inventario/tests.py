@@ -5,6 +5,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
+from django.core.exceptions import ValidationError
 
 # Import using the app name rather than the package path to avoid
 # "model not in INSTALLED_APPS" errors when the package sits under
@@ -83,19 +84,21 @@ class MovimientoModelTests(TestCase):
             cantidad=5,
         )
         self.assertEqual(str(m), "entrada - Leche (5)")
-        # el signal debe haber incrementado el stock
+        # el movimiento debe haber incrementado el stock
         self.prod.refresh_from_db()
         self.assertEqual(self.prod.stock, 15)
 
     def test_crear_movimiento_salida_insuficiente(self):
-        # cuando el stock no alcanza, la señal no debe restar
-        m = Movimiento.objects.create(
-            producto=self.prod,
-            tipo="salida",
-            cantidad=20,
-        )
+        # cuando el stock no alcanza, la salida debe fallar y no registrarse
+        with self.assertRaises(ValidationError):
+            Movimiento.objects.create(
+                producto=self.prod,
+                tipo="salida",
+                cantidad=20,
+            )
         self.prod.refresh_from_db()
         self.assertEqual(self.prod.stock, 10)
+        self.assertEqual(Movimiento.objects.filter(producto=self.prod, tipo='salida', cantidad=20).count(), 0)
 
     def test_crear_movimiento_salida_valido(self):
         m = Movimiento.objects.create(

@@ -4,17 +4,41 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.db.models import Q, F
 from django.core.paginator import Paginator
-from .models import Movimiento, Producto, Categoria, Proveedor, OrdenCompra, DetalleCompra, Venta, DetalleVenta
-from .forms import MovimientoForm, ProductoForm, ProductoEditForm, ProveedorForm, OrdenCompraForm, DetalleCompraForm, VentaForm, DetalleVentaForm
-from django.db.models import Sum, F, Count, Q
+from django.views.generic import ListView, CreateView, UpdateView
+from django.urls import reverse_lazy
+from django.http import JsonResponse, HttpResponse
+from .models import (
+    Movimiento,
+    Producto,
+    Categoria,
+    Proveedor,
+    Cliente,
+    OrdenCompra,
+    DetalleCompra,
+    Venta,
+    DetalleVenta,
+    HistorialDescuentoCliente,
+)
+from .forms import (
+    MovimientoForm,
+    ProductoForm,
+    ProductoEditForm,
+    ProveedorForm,
+    ClienteForm,
+    OrdenCompraForm,
+    DetalleCompraForm,
+    VentaForm,
+    DetalleVentaForm,
+)
+from .permissions import role_required, RoleRequiredMixin, ROLE_ADMIN, ROLE_VENDEDOR, ROLE_BODEGUERO
+from django.db.models import Sum, Count
 from django.utils import timezone
 from datetime import timedelta, datetime
-from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth.decorators import permission_required
 from django.db.models.functions import TruncMonth, TruncDate, TruncWeek, TruncYear
 from django.core.serializers.json import DjangoJSONEncoder
 import json
 from django.views.decorators.http import require_http_methods
-from django.http import JsonResponse
 
 @login_required
 def dashboard(request):
@@ -121,6 +145,7 @@ def detalle_producto(request, pk):
 
 
 @login_required
+@role_required(ROLE_ADMIN, ROLE_BODEGUERO)
 def crear_producto(request):
     if request.method == 'POST':
         form = ProductoForm(request.POST, request.FILES)
@@ -145,6 +170,7 @@ def crear_producto(request):
     return render(request, 'inventario/crear_producto.html', {'form': form})
 
 @login_required
+@role_required(ROLE_ADMIN, ROLE_BODEGUERO)
 def editar_producto(request, pk):
     producto = get_object_or_404(Producto, pk=pk)
     if request.method == 'POST':
@@ -160,6 +186,7 @@ def editar_producto(request, pk):
 
 
 @login_required
+@role_required(ROLE_ADMIN)
 def eliminar_producto(request, pk):
     producto = get_object_or_404(Producto, pk=pk)
     if request.method == 'POST':
@@ -174,6 +201,7 @@ def eliminar_producto(request, pk):
     return render(request, 'inventario/eliminar_producto.html', {'producto': producto})
 
 @login_required
+@role_required(ROLE_ADMIN, ROLE_BODEGUERO)
 def lista_movimientos(request):
     movimientos = Movimiento.objects.all().select_related('producto').order_by('-fecha')
     
@@ -213,6 +241,7 @@ def lista_movimientos(request):
     return render(request, 'inventario/lista_movimientos.html', context)
 
 @login_required
+@role_required(ROLE_ADMIN, ROLE_BODEGUERO)
 def crear_movimiento(request):
     # Si viene un producto por GET, preseleccionarlo
     producto_id = request.GET.get('producto')
@@ -253,6 +282,7 @@ def crear_movimiento(request):
 
 
 @login_required
+@role_required(ROLE_ADMIN)
 @permission_required('inventario.view_producto', raise_exception=True)
 def reportes(request):
     from django.db.models import Avg, Max, Min, DecimalField, Value
@@ -730,6 +760,7 @@ def reportes(request):
 # ============================================================================
 
 @login_required
+@role_required(ROLE_ADMIN, ROLE_BODEGUERO)
 def lista_proveedores(request):
     proveedores = Proveedor.objects.all()
     query = request.GET.get('q', '')
@@ -751,6 +782,7 @@ def lista_proveedores(request):
 
 
 @login_required
+@role_required(ROLE_ADMIN, ROLE_BODEGUERO)
 def crear_proveedor(request):
     if request.method == 'POST':
         form = ProveedorForm(request.POST)
@@ -764,6 +796,7 @@ def crear_proveedor(request):
 
 
 @login_required
+@role_required(ROLE_ADMIN, ROLE_BODEGUERO)
 def editar_proveedor(request, pk):
     proveedor = get_object_or_404(Proveedor, pk=pk)
     if request.method == 'POST':
@@ -778,6 +811,7 @@ def editar_proveedor(request, pk):
 
 
 @login_required
+@role_required(ROLE_ADMIN, ROLE_BODEGUERO)
 def detalle_proveedor(request, pk):
     proveedor = get_object_or_404(Proveedor, pk=pk)
     ordenes = proveedor.ordenes_compra.all().order_by('-fecha_creacion')[:10]
@@ -790,21 +824,35 @@ def detalle_proveedor(request, pk):
 # COMPRAS
 # ============================================================================
 
-@login_required
-def lista_compras(request):
-    compras = OrdenCompra.objects.all().select_related('proveedor')
-    estado = request.GET.get('estado', '')
+
+def _filtrar_compras_queryset(compras, params):
+    estado = params.get('estado', '')
     if estado:
         compras = compras.filter(estado=estado)
-    proveedor_id = request.GET.get('proveedor', '')
+
+    proveedor_id = params.get('proveedor', '')
     if proveedor_id and proveedor_id.isdigit():
         compras = compras.filter(proveedor_id=int(proveedor_id))
-    fecha_desde = request.GET.get('desde', '')
+
+    fecha_desde = params.get('desde', '')
     if fecha_desde:
         compras = compras.filter(fecha_creacion__date__gte=fecha_desde)
-    fecha_hasta = request.GET.get('hasta', '')
+
+    fecha_hasta = params.get('hasta', '')
     if fecha_hasta:
         compras = compras.filter(fecha_creacion__date__lte=fecha_hasta)
+
+    return compras, estado, proveedor_id, fecha_desde, fecha_hasta
+
+
+@login_required
+@role_required(ROLE_ADMIN, ROLE_BODEGUERO)
+def lista_compras(request):
+    compras = OrdenCompra.objects.all().select_related('proveedor')
+    compras, estado, proveedor_id, fecha_desde, fecha_hasta = _filtrar_compras_queryset(
+        compras,
+        request.GET,
+    )
 
     paginator = Paginator(compras, 20)
     page_obj = paginator.get_page(request.GET.get('page', 1))
@@ -817,12 +865,14 @@ def lista_compras(request):
 
 
 @login_required
+@role_required(ROLE_ADMIN, ROLE_BODEGUERO)
 def crear_compra(request):
     """Redirects to the unified fast purchase interface."""
     return redirect('inventario:compra_rapida')
 
 
 @login_required
+@role_required(ROLE_ADMIN, ROLE_BODEGUERO)
 def detalle_compra(request, pk):
     orden = get_object_or_404(OrdenCompra, pk=pk)
     detalles = orden.detalles.all().select_related('producto')
@@ -832,6 +882,7 @@ def detalle_compra(request, pk):
 
 
 @login_required
+@role_required(ROLE_ADMIN, ROLE_BODEGUERO)
 @require_http_methods(["POST"])
 def recibir_compra(request, pk):
     orden = get_object_or_404(OrdenCompra, pk=pk)
@@ -842,7 +893,7 @@ def recibir_compra(request, pk):
     for detalle in orden.detalles.all():
         detalle.cantidad_recibida = detalle.cantidad_solicitada
         detalle.save()
-        # Crear movimiento de entrada (signal actualiza stock)
+        # Crear movimiento de entrada (el modelo Movimiento actualiza stock)
         Movimiento.objects.create(
             producto=detalle.producto,
             tipo='entrada',
@@ -862,26 +913,43 @@ def recibir_compra(request, pk):
 # VENTAS
 # ============================================================================
 
-@login_required
-def lista_ventas(request):
-    ventas = Venta.objects.all()
-    estado = request.GET.get('estado', '')
+
+def _filtrar_ventas_queryset(ventas, params):
+    estado = params.get('estado', '')
     if estado:
         ventas = ventas.filter(estado=estado)
-    forma_pago = request.GET.get('forma_pago', '')
+
+    forma_pago = params.get('forma_pago', '')
     if forma_pago:
         ventas = ventas.filter(forma_pago=forma_pago)
-    fecha_desde = request.GET.get('desde', '')
+
+    fecha_desde = params.get('desde', '')
     if fecha_desde:
         ventas = ventas.filter(fecha_venta__date__gte=fecha_desde)
-    fecha_hasta = request.GET.get('hasta', '')
+
+    fecha_hasta = params.get('hasta', '')
     if fecha_hasta:
         ventas = ventas.filter(fecha_venta__date__lte=fecha_hasta)
-    query = request.GET.get('q', '')
+
+    query = params.get('q', '')
     if query:
         ventas = ventas.filter(
-            Q(numero__icontains=query) | Q(cliente_nombre__icontains=query)
+            Q(numero__icontains=query)
+            | Q(cliente_nombre__icontains=query)
+            | Q(usuario_vendedor__icontains=query)
         )
+
+    return ventas, estado, forma_pago, fecha_desde, fecha_hasta, query
+
+
+@login_required
+@role_required(ROLE_ADMIN, ROLE_VENDEDOR)
+def lista_ventas(request):
+    ventas = Venta.objects.all()
+    ventas, estado, forma_pago, fecha_desde, fecha_hasta, query = _filtrar_ventas_queryset(
+        ventas,
+        request.GET,
+    )
 
     paginator = Paginator(ventas, 20)
     page_obj = paginator.get_page(request.GET.get('page', 1))
@@ -892,12 +960,14 @@ def lista_ventas(request):
 
 
 @login_required
+@role_required(ROLE_ADMIN, ROLE_VENDEDOR)
 def crear_venta(request):
     """Redirects to the unified POS sale interface."""
     return redirect('inventario:venta_rapida')
 
 
 @login_required
+@role_required(ROLE_ADMIN, ROLE_VENDEDOR)
 def detalle_venta(request, pk):
     venta = get_object_or_404(Venta, pk=pk)
     detalles = venta.detalles.all().select_related('producto')
@@ -907,6 +977,7 @@ def detalle_venta(request, pk):
 
 
 @login_required
+@role_required(ROLE_ADMIN)
 @require_http_methods(["POST"])
 def cancelar_venta(request, pk):
     venta = get_object_or_404(Venta, pk=pk)
@@ -914,7 +985,7 @@ def cancelar_venta(request, pk):
         messages.error(request, 'Esta venta ya está cancelada.')
         return redirect('inventario:detalle_venta', pk=venta.pk)
 
-    # Revertir stock via movimiento (signal actualiza stock)
+    # Revertir stock vía movimiento (el modelo Movimiento actualiza stock)
     for detalle in venta.detalles.all():
         Movimiento.objects.create(
             producto=detalle.producto,
@@ -976,12 +1047,17 @@ def api_producto_detalle(request, pk):
 # ============================================================================
 
 @login_required
+@role_required(ROLE_ADMIN, ROLE_VENDEDOR)
 def venta_rapida(request):
     """Renders the POS-style fast sale interface."""
-    return render(request, 'inventario/venta_rapida.html')
+    clientes = Cliente.objects.filter(activo=True).order_by('nombre')
+    return render(request, 'inventario/venta_rapida.html', {
+        'clientes': clientes,
+    })
 
 
 @login_required
+@role_required(ROLE_ADMIN, ROLE_BODEGUERO)
 def compra_rapida(request):
     """Renders the fast purchase interface."""
     proveedores = Proveedor.objects.filter(activo=True).order_by('nombre')
@@ -991,6 +1067,7 @@ def compra_rapida(request):
 
 
 @login_required
+@role_required(ROLE_ADMIN, ROLE_VENDEDOR)
 @require_http_methods(["POST"])
 def api_pos_venta(request):
     """AJAX endpoint for POS sale submission. Expects JSON body."""
@@ -1008,8 +1085,18 @@ def api_pos_venta(request):
         return JsonResponse({'ok': False, 'error': 'No hay productos en la venta'}, status=400)
 
     cliente = (data.get('cliente', '') or '').strip() or 'Cliente General'
+    cliente_id = data.get('cliente_id')
+    descuento_manual_raw = data.get('descuento_manual_porcentaje', 0)
     forma_pago = data.get('forma_pago', 'efectivo')
     notas = data.get('notas', '')
+
+    try:
+        descuento_manual_porcentaje = Decimal(str(descuento_manual_raw or 0))
+    except (InvalidOperation, ValueError, TypeError):
+        return JsonResponse({'ok': False, 'error': 'Descuento manual inválido'}, status=400)
+
+    if descuento_manual_porcentaje < 0 or descuento_manual_porcentaje > 100:
+        return JsonResponse({'ok': False, 'error': 'El descuento manual debe estar entre 0 y 100'}, status=400)
 
     # Validate forma_pago
     valid_pagos = [c[0] for c in Venta.PAGO_CHOICES]
@@ -1041,8 +1128,23 @@ def api_pos_venta(request):
                     'precio': Decimal(str(item.get('precio', str(producto.precio)))),
                 })
 
+            cliente_obj = None
+            descuento_cliente_porcentaje = Decimal('0')
+            if cliente_id:
+                try:
+                    cliente_obj = Cliente.objects.get(pk=cliente_id, activo=True)
+                    cliente = cliente_obj.nombre
+                    descuento_cliente_porcentaje = cliente_obj.descuento_vigente()
+                except Cliente.DoesNotExist:
+                    return JsonResponse({'ok': False, 'error': 'Cliente no encontrado'}, status=400)
+
+            descuento_porcentaje = descuento_cliente_porcentaje + descuento_manual_porcentaje
+            if descuento_porcentaje > Decimal('100'):
+                descuento_porcentaje = Decimal('100')
+
             # Create sale
             venta = Venta(
+                cliente=cliente_obj,
                 cliente_nombre=cliente,
                 forma_pago=forma_pago,
                 notas=notas,
@@ -1051,7 +1153,7 @@ def api_pos_venta(request):
             )
             venta.save()
 
-            total = Decimal('0')
+            subtotal = Decimal('0')
             for vi in validated:
                 detalle = DetalleVenta(
                     venta=venta,
@@ -1061,8 +1163,8 @@ def api_pos_venta(request):
                     descuento_porcentaje=Decimal('0'),
                 )
                 detalle.save()
-                total += detalle.subtotal
-                # Signal handles stock update
+                subtotal += detalle.subtotal
+                # Movimiento actualiza stock en guardado atómico
                 Movimiento.objects.create(
                     producto=vi['producto'],
                     tipo='salida',
@@ -1071,13 +1173,37 @@ def api_pos_venta(request):
                     usuario=request.user.username,
                 )
 
+            descuento_total = (subtotal * descuento_porcentaje) / Decimal('100')
+            total = subtotal - descuento_total
+            if total < 0:
+                total = Decimal('0')
+
+            venta.subtotal = subtotal
+            venta.descuento_total = descuento_total
             venta.total = total
-            venta.save(update_fields=['total'])
+            venta.save(update_fields=['subtotal', 'descuento_total', 'total'])
+
+            if cliente_obj and descuento_total > 0:
+                tipo_descuento = 'automatico'
+                if descuento_manual_porcentaje > 0 and descuento_cliente_porcentaje > 0:
+                    tipo_descuento = 'combinado'
+                elif descuento_manual_porcentaje > 0:
+                    tipo_descuento = 'manual'
+
+                HistorialDescuentoCliente.objects.create(
+                    cliente=cliente_obj,
+                    venta=venta,
+                    porcentaje_aplicado=descuento_porcentaje,
+                    monto_descuento=descuento_total,
+                    tipo=tipo_descuento,
+                )
 
         return JsonResponse({
             'ok': True,
             'venta_id': venta.pk,
             'numero': venta.numero,
+            'subtotal': str(venta.subtotal),
+            'descuento_total': str(venta.descuento_total),
             'total': str(venta.total),
         })
 
@@ -1088,6 +1214,7 @@ def api_pos_venta(request):
 
 
 @login_required
+@role_required(ROLE_ADMIN, ROLE_BODEGUERO)
 @require_http_methods(["POST"])
 def api_pos_compra(request):
     """AJAX endpoint for fast purchase submission. Creates order and receives immediately."""
@@ -1156,7 +1283,7 @@ def api_pos_compra(request):
                 )
                 detalle.save()
                 total += detalle.subtotal
-                # Signal handles stock update
+                # Movimiento actualiza stock en guardado atómico
                 Movimiento.objects.create(
                     producto=vi['producto'],
                     tipo='entrada',
@@ -1181,3 +1308,393 @@ def api_pos_compra(request):
         return JsonResponse({'ok': False, 'error': 'Producto no encontrado'}, status=400)
     except (ValueError, InvalidOperation, KeyError) as e:
         return JsonResponse({'ok': False, 'error': f'Error en datos: {str(e)}'}, status=400)
+
+
+@login_required
+@role_required(ROLE_ADMIN, ROLE_VENDEDOR)
+@require_http_methods(["GET"])
+def api_cliente_descuento(request, pk):
+    cliente = get_object_or_404(Cliente, pk=pk, activo=True)
+    porcentaje = cliente.descuento_vigente()
+    return JsonResponse({
+        'id': cliente.pk,
+        'nombre': cliente.nombre,
+        'descuento_porcentaje': str(porcentaje),
+    })
+
+
+# ============================================================================
+# CLIENTES (CBV)
+# ============================================================================
+
+
+class ClienteListView(RoleRequiredMixin, ListView):
+    model = Cliente
+    template_name = 'inventario/lista_clientes.html'
+    context_object_name = 'clientes'
+    paginate_by = 20
+    allowed_groups = (ROLE_ADMIN, ROLE_VENDEDOR)
+
+    def get_queryset(self):
+        qs = Cliente.objects.all().order_by('nombre')
+        q = self.request.GET.get('q', '')
+        if q:
+            qs = qs.filter(
+                Q(nombre__icontains=q)
+                | Q(documento__icontains=q)
+                | Q(email__icontains=q)
+                | Q(telefono__icontains=q)
+            )
+        estado = self.request.GET.get('activo', '')
+        if estado == '1':
+            qs = qs.filter(activo=True)
+        elif estado == '0':
+            qs = qs.filter(activo=False)
+        return qs
+
+
+class ClienteCreateView(RoleRequiredMixin, CreateView):
+    model = Cliente
+    form_class = ClienteForm
+    template_name = 'inventario/cliente_form.html'
+    success_url = reverse_lazy('inventario:lista_clientes')
+    allowed_groups = (ROLE_ADMIN,)
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Cliente creado correctamente.')
+        return super().form_valid(form)
+
+
+class ClienteUpdateView(RoleRequiredMixin, UpdateView):
+    model = Cliente
+    form_class = ClienteForm
+    template_name = 'inventario/cliente_form.html'
+    success_url = reverse_lazy('inventario:lista_clientes')
+    allowed_groups = (ROLE_ADMIN,)
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Cliente actualizado correctamente.')
+        return super().form_valid(form)
+
+
+# ============================================================================
+# PDF DOCUMENTS
+# ============================================================================
+
+
+def _build_venta_pdf(venta, detalles):
+    from io import BytesIO
+    from reportlab.lib.pagesizes import letter
+    from reportlab.pdfgen import canvas
+
+    buffer = BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+
+    y = height - 50
+    p.setFont('Helvetica-Bold', 16)
+    p.drawString(40, y, 'El Solterito - Factura de Venta')
+    y -= 24
+    p.setFont('Helvetica', 10)
+    p.drawString(40, y, f'Factura: {venta.numero}')
+    p.drawString(250, y, f'Fecha: {venta.fecha_venta.strftime("%d/%m/%Y %H:%M")}')
+    y -= 16
+    p.drawString(40, y, f'Cliente: {venta.cliente_nombre}')
+    p.drawString(250, y, f'Vendedor: {venta.usuario_vendedor}')
+    y -= 24
+
+    p.setFont('Helvetica-Bold', 10)
+    p.drawString(40, y, 'Producto')
+    p.drawString(280, y, 'Cant')
+    p.drawString(340, y, 'Precio')
+    p.drawString(440, y, 'Subtotal')
+    y -= 14
+    p.line(40, y, width - 40, y)
+    y -= 14
+
+    p.setFont('Helvetica', 10)
+    for d in detalles:
+        if y < 120:
+            p.showPage()
+            y = height - 50
+        p.drawString(40, y, d.producto.nombre[:38])
+        p.drawRightString(310, y, str(d.cantidad))
+        p.drawRightString(410, y, f'COP {float(d.precio_unitario):,.0f}')
+        p.drawRightString(540, y, f'COP {float(d.subtotal):,.0f}')
+        y -= 14
+
+    y -= 12
+    p.line(330, y, 540, y)
+    y -= 16
+    p.drawString(360, y, 'Subtotal:')
+    p.drawRightString(540, y, f'COP {float(venta.subtotal):,.0f}')
+    y -= 14
+    p.drawString(360, y, 'Descuento:')
+    p.drawRightString(540, y, f'COP {float(venta.descuento_total):,.0f}')
+    y -= 14
+    p.setFont('Helvetica-Bold', 10)
+    p.drawString(360, y, 'Total:')
+    p.drawRightString(540, y, f'COP {float(venta.total):,.0f}')
+
+    p.showPage()
+    p.save()
+    return buffer.getvalue()
+
+
+def _build_compra_pdf(orden, detalles):
+    from io import BytesIO
+    from reportlab.lib.pagesizes import letter
+    from reportlab.pdfgen import canvas
+
+    buffer = BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+
+    y = height - 50
+    p.setFont('Helvetica-Bold', 16)
+    p.drawString(40, y, 'El Solterito - Comprobante de Compra')
+    y -= 24
+    p.setFont('Helvetica', 10)
+    p.drawString(40, y, f'Compra: {orden.numero}')
+    p.drawString(250, y, f'Fecha: {orden.fecha_creacion.strftime("%d/%m/%Y %H:%M")}')
+    y -= 16
+    p.drawString(40, y, f'Proveedor: {orden.proveedor.nombre}')
+    y -= 24
+
+    p.setFont('Helvetica-Bold', 10)
+    p.drawString(40, y, 'Producto')
+    p.drawString(280, y, 'Cant')
+    p.drawString(340, y, 'Costo')
+    p.drawString(440, y, 'Subtotal')
+    y -= 14
+    p.line(40, y, width - 40, y)
+    y -= 14
+
+    p.setFont('Helvetica', 10)
+    for d in detalles:
+        if y < 120:
+            p.showPage()
+            y = height - 50
+        p.drawString(40, y, d.producto.nombre[:38])
+        p.drawRightString(310, y, str(d.cantidad_solicitada))
+        p.drawRightString(410, y, f'COP {float(d.precio_unitario):,.0f}')
+        p.drawRightString(540, y, f'COP {float(d.subtotal):,.0f}')
+        y -= 14
+
+    y -= 12
+    p.line(330, y, 540, y)
+    y -= 16
+    p.setFont('Helvetica-Bold', 10)
+    p.drawString(360, y, 'Total:')
+    p.drawRightString(540, y, f'COP {float(orden.total):,.0f}')
+
+    p.showPage()
+    p.save()
+    return buffer.getvalue()
+
+
+@login_required
+@role_required(ROLE_ADMIN, ROLE_VENDEDOR)
+def venta_pdf(request, pk):
+    venta = get_object_or_404(Venta.objects.select_related('cliente'), pk=pk)
+    detalles = venta.detalles.select_related('producto')
+    pdf = _build_venta_pdf(venta, detalles)
+
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="factura_{venta.numero}.pdf"'
+    return response
+
+
+@login_required
+@role_required(ROLE_ADMIN, ROLE_BODEGUERO)
+def compra_pdf(request, pk):
+    orden = get_object_or_404(OrdenCompra.objects.select_related('proveedor'), pk=pk)
+    detalles = orden.detalles.select_related('producto')
+    pdf = _build_compra_pdf(orden, detalles)
+
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="compra_{orden.numero}.pdf"'
+    return response
+
+
+def _build_ventas_list_pdf(ventas, filtros_texto):
+    from io import BytesIO
+    from reportlab.lib.pagesizes import letter
+    from reportlab.pdfgen import canvas
+
+    buffer = BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+
+    y = height - 50
+    p.setFont('Helvetica-Bold', 15)
+    p.drawString(40, y, 'El Solterito - Registro de Ventas')
+    y -= 18
+    p.setFont('Helvetica', 9)
+    p.drawString(40, y, f'Generado: {timezone.now().strftime("%d/%m/%Y %H:%M")}')
+    y -= 14
+    p.drawString(40, y, f'Filtro aplicado: {filtros_texto}')
+    y -= 18
+
+    p.setFont('Helvetica-Bold', 9)
+    p.drawString(40, y, 'Numero')
+    p.drawString(120, y, 'Cliente')
+    p.drawString(255, y, 'Vendedor')
+    p.drawString(350, y, 'Fecha')
+    p.drawString(425, y, 'Estado')
+    p.drawRightString(550, y, 'Total')
+    y -= 10
+    p.line(40, y, width - 40, y)
+    y -= 12
+
+    total_general = 0
+    p.setFont('Helvetica', 8)
+    if not ventas:
+        p.drawString(40, y, 'No hay ventas para los criterios seleccionados.')
+    else:
+        for venta in ventas:
+            if y < 70:
+                p.showPage()
+                y = height - 50
+                p.setFont('Helvetica-Bold', 9)
+                p.drawString(40, y, 'Numero')
+                p.drawString(120, y, 'Cliente')
+                p.drawString(255, y, 'Vendedor')
+                p.drawString(350, y, 'Fecha')
+                p.drawString(425, y, 'Estado')
+                p.drawRightString(550, y, 'Total')
+                y -= 10
+                p.line(40, y, width - 40, y)
+                y -= 12
+                p.setFont('Helvetica', 8)
+
+            total_general += float(venta.total or 0)
+            p.drawString(40, y, str(venta.numero)[:14])
+            p.drawString(120, y, str(venta.cliente_nombre or '-')[:24])
+            p.drawString(255, y, str(venta.usuario_vendedor or '-')[:16])
+            p.drawString(350, y, venta.fecha_venta.strftime('%d/%m/%y'))
+            p.drawString(425, y, venta.get_estado_display())
+            p.drawRightString(550, y, f'COP {float(venta.total):,.0f}')
+            y -= 12
+
+    y -= 10
+    p.line(370, y, 550, y)
+    y -= 14
+    p.setFont('Helvetica-Bold', 10)
+    p.drawString(410, y, 'Total listado:')
+    p.drawRightString(550, y, f'COP {total_general:,.0f}')
+
+    p.showPage()
+    p.save()
+    return buffer.getvalue()
+
+
+def _build_compras_list_pdf(compras, filtros_texto):
+    from io import BytesIO
+    from reportlab.lib.pagesizes import letter
+    from reportlab.pdfgen import canvas
+
+    buffer = BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+
+    y = height - 50
+    p.setFont('Helvetica-Bold', 15)
+    p.drawString(40, y, 'El Solterito - Registro de Compras')
+    y -= 18
+    p.setFont('Helvetica', 9)
+    p.drawString(40, y, f'Generado: {timezone.now().strftime("%d/%m/%Y %H:%M")}')
+    y -= 14
+    p.drawString(40, y, f'Filtro aplicado: {filtros_texto}')
+    y -= 18
+
+    p.setFont('Helvetica-Bold', 9)
+    p.drawString(40, y, 'Numero')
+    p.drawString(140, y, 'Proveedor')
+    p.drawString(330, y, 'Fecha')
+    p.drawString(410, y, 'Estado')
+    p.drawRightString(550, y, 'Total')
+    y -= 10
+    p.line(40, y, width - 40, y)
+    y -= 12
+
+    total_general = 0
+    p.setFont('Helvetica', 8)
+    if not compras:
+        p.drawString(40, y, 'No hay compras para los criterios seleccionados.')
+    else:
+        for orden in compras:
+            if y < 70:
+                p.showPage()
+                y = height - 50
+                p.setFont('Helvetica-Bold', 9)
+                p.drawString(40, y, 'Numero')
+                p.drawString(140, y, 'Proveedor')
+                p.drawString(330, y, 'Fecha')
+                p.drawString(410, y, 'Estado')
+                p.drawRightString(550, y, 'Total')
+                y -= 10
+                p.line(40, y, width - 40, y)
+                y -= 12
+                p.setFont('Helvetica', 8)
+
+            total_general += float(orden.total or 0)
+            p.drawString(40, y, str(orden.numero)[:18])
+            p.drawString(140, y, str(orden.proveedor.nombre if orden.proveedor else '-')[:32])
+            p.drawString(330, y, orden.fecha_creacion.strftime('%d/%m/%y'))
+            p.drawString(410, y, orden.get_estado_display())
+            p.drawRightString(550, y, f'COP {float(orden.total):,.0f}')
+            y -= 12
+
+    y -= 10
+    p.line(370, y, 550, y)
+    y -= 14
+    p.setFont('Helvetica-Bold', 10)
+    p.drawString(410, y, 'Total listado:')
+    p.drawRightString(550, y, f'COP {total_general:,.0f}')
+
+    p.showPage()
+    p.save()
+    return buffer.getvalue()
+
+
+@login_required
+@role_required(ROLE_ADMIN, ROLE_VENDEDOR)
+def ventas_pdf_lista(request):
+    scope = request.GET.get('scope', 'filtered')
+    ventas = Venta.objects.all().order_by('-fecha_venta')
+
+    if scope == 'all':
+        filtros_texto = 'Todos los registros'
+    else:
+        ventas, estado, forma_pago, fecha_desde, fecha_hasta, query = _filtrar_ventas_queryset(ventas, request.GET)
+        filtros_texto = (
+            f'q={query or "-"}, estado={estado or "-"}, pago={forma_pago or "-"}, '
+            f'desde={fecha_desde or "-"}, hasta={fecha_hasta or "-"}'
+        )
+
+    pdf = _build_ventas_list_pdf(list(ventas), filtros_texto)
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = 'inline; filename="ventas_registro.pdf"'
+    return response
+
+
+@login_required
+@role_required(ROLE_ADMIN, ROLE_BODEGUERO)
+def compras_pdf_lista(request):
+    scope = request.GET.get('scope', 'filtered')
+    compras = OrdenCompra.objects.select_related('proveedor').order_by('-fecha_creacion')
+
+    if scope == 'all':
+        filtros_texto = 'Todos los registros'
+    else:
+        compras, estado, proveedor_id, fecha_desde, fecha_hasta = _filtrar_compras_queryset(compras, request.GET)
+        filtros_texto = (
+            f'proveedor={proveedor_id or "-"}, estado={estado or "-"}, '
+            f'desde={fecha_desde or "-"}, hasta={fecha_hasta or "-"}'
+        )
+
+    pdf = _build_compras_list_pdf(list(compras), filtros_texto)
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = 'inline; filename="compras_registro.pdf"'
+    return response

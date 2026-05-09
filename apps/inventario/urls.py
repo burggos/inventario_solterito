@@ -18,6 +18,11 @@ urlpatterns = [
     path('movimiento/nuevo/', views.crear_movimiento, name='crear_movimiento'),
     path('reportes/', views.reportes, name='reportes'),
 
+    # Clientes
+    path('clientes/', views.ClienteListView.as_view(), name='lista_clientes'),
+    path('clientes/nuevo/', views.ClienteCreateView.as_view(), name='crear_cliente'),
+    path('clientes/<int:pk>/editar/', views.ClienteUpdateView.as_view(), name='editar_cliente'),
+
     # Proveedores
     path('proveedores/', views.lista_proveedores, name='lista_proveedores'),
     path('proveedores/nuevo/', views.crear_proveedor, name='crear_proveedor'),
@@ -26,15 +31,19 @@ urlpatterns = [
 
     # Compras
     path('compras/', views.lista_compras, name='lista_compras'),
+    path('compras/pdf-registro/', views.compras_pdf_lista, name='compras_pdf_lista'),
     path('compras/nueva/', views.crear_compra, name='crear_compra'),
     path('compras/<int:pk>/', views.detalle_compra, name='detalle_compra'),
     path('compras/<int:pk>/recibir/', views.recibir_compra, name='recibir_compra'),
+    path('compras/<int:pk>/pdf/', views.compra_pdf, name='compra_pdf'),
 
     # Ventas
     path('ventas/', views.lista_ventas, name='lista_ventas'),
+    path('ventas/pdf-registro/', views.ventas_pdf_lista, name='ventas_pdf_lista'),
     path('ventas/nueva/', views.crear_venta, name='crear_venta'),
     path('ventas/<int:pk>/', views.detalle_venta, name='detalle_venta'),
     path('ventas/<int:pk>/cancelar/', views.cancelar_venta, name='cancelar_venta'),
+    path('ventas/<int:pk>/pdf/', views.venta_pdf, name='venta_pdf'),
 
     # POS / Operaciones rápidas
     path('pos/venta/', views.venta_rapida, name='venta_rapida'),
@@ -43,6 +52,7 @@ urlpatterns = [
     # API (AJAX)
     path('api/productos/buscar/', views.api_buscar_productos, name='api_buscar_productos'),
     path('api/productos/<int:pk>/', views.api_producto_detalle, name='api_producto_detalle'),
+    path('api/clientes/<int:pk>/descuento/', views.api_cliente_descuento, name='api_cliente_descuento'),
     path('api/pos/venta/', views.api_pos_venta, name='api_pos_venta'),
     path('api/pos/compra/', views.api_pos_compra, name='api_pos_compra'),
 ]

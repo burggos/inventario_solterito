@@ -1,5 +1,16 @@
 from django.contrib import admin
-from .models import Categoria, Producto, Movimiento, Proveedor, OrdenCompra, DetalleCompra, Venta, DetalleVenta
+from .models import (
+    Categoria,
+    Producto,
+    Movimiento,
+    Proveedor,
+    Cliente,
+    OrdenCompra,
+    DetalleCompra,
+    Venta,
+    DetalleVenta,
+    HistorialDescuentoCliente,
+)
 
 @admin.register(Categoria)
 class CategoriaAdmin(admin.ModelAdmin):
@@ -11,8 +22,8 @@ class ProductoAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'categoria', 'precio', 'stock', 'stock_minimo', 'necesita_reposicion', 'activo')
     list_filter = ('categoria', 'activo')
     search_fields = ('nombre', 'codigo_barras')
-    list_editable = ('precio', 'stock', 'activo')
-    readonly_fields = ('fecha_creacion', 'fecha_actualizacion')
+    list_editable = ('precio', 'activo')
+    readonly_fields = ('stock', 'fecha_creacion', 'fecha_actualizacion')
     fieldsets = (
         ('Información básica', {
             'fields': ('nombre', 'descripcion', 'categoria', 'imagen')
@@ -62,6 +73,17 @@ class ProveedorAdmin(admin.ModelAdmin):
     )
 
 
+@admin.register(Cliente)
+class ClienteAdmin(admin.ModelAdmin):
+    list_display = (
+        'nombre', 'documento', 'telefono', 'activo', 'descuento_fijo',
+        'descuento_temporal', 'descuento_fidelidad', 'umbral_fidelidad'
+    )
+    list_filter = ('activo',)
+    search_fields = ('nombre', 'documento', 'email', 'telefono')
+    readonly_fields = ('fecha_creacion', 'fecha_actualizacion')
+
+
 class DetalleCompraInline(admin.TabularInline):
     model = DetalleCompra
     extra = 1
@@ -109,20 +131,20 @@ class DetalleVentaInline(admin.TabularInline):
 
 @admin.register(Venta)
 class VentaAdmin(admin.ModelAdmin):
-    list_display = ('numero', 'cliente_nombre', 'fecha_venta', 'total', 'forma_pago', 'estado')
+    list_display = ('numero', 'cliente_nombre', 'fecha_venta', 'subtotal', 'descuento_total', 'total', 'forma_pago', 'estado')
     list_filter = ('estado', 'forma_pago', 'fecha_venta')
     search_fields = ('numero', 'cliente_nombre')
-    readonly_fields = ('numero', 'fecha_venta', 'total')
+    readonly_fields = ('numero', 'fecha_venta', 'subtotal', 'descuento_total', 'total')
     inlines = [DetalleVentaInline]
     fieldsets = (
         ('Información básica', {
-            'fields': ('numero', 'cliente_nombre', 'estado')
+            'fields': ('numero', 'cliente', 'cliente_nombre', 'estado')
         }),
         ('Fecha y pago', {
             'fields': ('fecha_venta', 'forma_pago')
         }),
         ('Financiero', {
-            'fields': ('total',)
+            'fields': ('subtotal', 'descuento_total', 'total')
         }),
         ('Notas', {
             'fields': ('notas', 'usuario_vendedor')
@@ -136,3 +158,10 @@ class DetalleVentaAdmin(admin.ModelAdmin):
     list_filter = ('venta__fecha_venta', 'fecha_creacion')
     search_fields = ('venta__numero', 'producto__nombre')
     readonly_fields = ('subtotal', 'fecha_creacion')
+
+
+@admin.register(HistorialDescuentoCliente)
+class HistorialDescuentoClienteAdmin(admin.ModelAdmin):
+    list_display = ('cliente', 'venta', 'porcentaje_aplicado', 'monto_descuento', 'tipo', 'fecha')
+    list_filter = ('tipo', 'fecha')
+    search_fields = ('cliente__nombre', 'venta__numero')

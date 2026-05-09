@@ -1,102 +1,136 @@
-# Plan de Expansión: Sistema de Ventas y Compras
+# Plan de Expansion: El Solterito (Actualizado)
 
-## Base del Proyecto
+Fecha actualizacion: 2026-05-09
 
-- [x] CRUD de productos (crear, editar, eliminar, listar, detalle)
-- [x] Gestión de inventario con movimientos (entrada/salida/ajuste)
-- [x] Dashboard con KPIs, gráficos Chart.js y resumen de actividad
-- [x] UI estandarizada (Tailwind CSS + Dark Mode + CSS personalizado)
-- [x] Autenticación (Login/Logout)
-- [x] Reportes de inventario
-- [x] Migraciones aplicadas
+## Resumen Ejecutivo
+Este plan integra roles y permisos, reportes dinamicos, descuentos por cliente y generacion de PDF sobre el proyecto actual, manteniendo arquitectura Django MVT y compatibilidad con despliegue modular.
 
 ---
 
-## FASE 0: Modelos y Configuración
+## FASE A: Roles y Control de Acceso
 
-- [x] Modelo `Proveedor` (nombre, email, teléfono, dirección, RUC, términos de pago)
-- [x] Modelo `OrdenCompra` (proveedor, estado, total, número auto-generado)
-- [x] Modelo `DetalleCompra` (orden, producto, cantidad solicitada/recibida, precio, subtotal)
-- [x] Modelo `Venta` (cliente, forma de pago, estado, total, número auto-generado)
-- [x] Modelo `DetalleVenta` (venta, producto, cantidad, precio, descuento, subtotal)
-- [x] Formularios: `ProveedorForm`, `OrdenCompraForm`, `DetalleCompraForm`, `VentaForm`, `DetalleVentaForm`
-- [x] Admin registrado para todos los modelos (Proveedor, OrdenCompra, DetalleCompra, Venta, DetalleVenta)
-- [x] Migraciones generadas y aplicadas
+### Requerimientos
+- [x] Definir roles: Administrador, Vendedor, Bodeguero.
+- [x] Crear decoradores de rol para vistas existentes.
+- [x] Crear mixin para CBVs nuevas con validacion de grupos.
+- [x] Implementar grupos de Django y semilla automatica de permisos.
+- [x] Mostrar opciones de interfaz segun rol autenticado.
 
----
-
-## FASE 1: Proveedores — Vistas + URLs + Templates
-
-- [x] `lista_proveedores` — Lista con búsqueda y filtros
-- [x] `crear_proveedor` — Formulario de creación
-- [x] `editar_proveedor` — Formulario de edición
-- [x] `detalle_proveedor` — Detalle con historial de compras
-- [x] Template `lista_proveedores.html`
-- [x] Template `crear_proveedor.html`
-- [x] Template `editar_proveedor.html`
-- [x] Template `detalle_proveedor.html`
-- [x] URLs registradas (`/proveedores/`, `/proveedores/nuevo/`, `/proveedores/<id>/`, `/proveedores/<id>/editar/`)
+### Implementado
+- [x] Archivo de permisos: `apps/inventario/permissions.py`.
+- [x] Template tags para roles: `apps/inventario/templatetags/role_tags.py`.
+- [x] Comando: `python manage.py seed_roles`.
+- [x] Restricciones por rol en productos, compras, ventas, movimientos y reportes.
+- [x] Sidebar dinamico por rol en `templates/base.html`.
 
 ---
 
-## FASE 2: Compras — Vistas + URLs + Templates
+## FASE B: Clientes y Descuentos
 
-- [x] `lista_compras` — Lista de órdenes con filtros por estado/proveedor/fecha
-- [x] `crear_compra` — Redirige al POS de compra rápida
-- [x] `detalle_compra` — Detalle con lista de ítems
-- [x] `recibir_compra` — Marcar como recibida y actualizar stock automáticamente
-- [x] Template `lista_compras.html`
-- [x] Template `crear_compra.html`
-- [x] Template `detalle_compra.html`
-- [x] Template `compra_rapida.html` (interfaz POS)
-- [x] URLs registradas (`/compras/`, `/compras/nueva/`, `/compras/<id>/`, `/compras/<id>/recibir/`)
+### Requerimientos
+- [x] Modelo de cliente con descuento fijo, temporal y fidelidad.
+- [x] Aplicar descuento automaticamente durante la venta.
+- [x] Mostrar subtotal, descuento aplicado y total final.
+- [x] Guardar historial de descuentos usados.
+- [x] Evitar totales negativos.
 
----
-
-## FASE 3: Ventas — Vistas + URLs + Templates
-
-- [x] `lista_ventas` — Lista con filtros por estado/fecha/forma de pago
-- [x] `crear_venta` — Redirige al POS de venta rápida
-- [x] `detalle_venta` — Detalle con lista de ítems
-- [x] `cancelar_venta` — Cancelar y revertir stock
-- [x] Template `lista_ventas.html`
-- [x] Template `crear_venta.html`
-- [x] Template `detalle_venta.html`
-- [x] Template `venta_rapida.html` (interfaz POS)
-- [x] URLs registradas (`/ventas/`, `/ventas/nueva/`, `/ventas/<id>/`, `/ventas/<id>/cancelar/`)
+### Implementado
+- [x] Modelo `Cliente` con reglas de descuento.
+- [x] Modelo `HistorialDescuentoCliente`.
+- [x] Campos `subtotal` y `descuento_total` en `Venta`.
+- [x] Endpoint `api_cliente_descuento`.
+- [x] Integracion POS en `venta_rapida.html` (cliente + descuento en vivo).
+- [x] Persistencia de historial de descuento en `api_pos_venta`.
 
 ---
 
-## FASE 4: API Endpoints (AJAX)
+## FASE C: Reportes Dinamicos (HTMX + Chart.js)
 
-- [x] `api_buscar_productos` — Búsqueda por nombre/código para autocompletado (JSON)
-- [x] `api_producto_detalle` — Obtener precio y stock de un producto (JSON)
-- [x] `api_pos_venta` — Procesar venta desde POS (JSON, transaccional)
-- [x] `api_pos_compra` — Procesar compra desde POS (JSON, transaccional)
-- [x] URLs registradas (`/api/productos/buscar/`, `/api/productos/<id>/`, `/api/pos/venta/`, `/api/pos/compra/`)
+### Estado
+- [x] Modulo retirado del producto por decision funcional.
+- [x] Eliminadas rutas, vistas y templates asociados.
 
 ---
 
-## FASE 5: Integración
+## FASE D: PDFs Profesionales
 
-- [x] Señal `actualizar_stock` en movimientos (entrada/salida con F() expressions atómicas)
-- [x] Creación automática de movimientos al completar venta POS
-- [x] Creación automática de movimientos al completar compra POS
-- [x] Recálculo automático de totales en ventas y órdenes de compra
-- [x] Navbar actualizado con enlaces a Proveedores, Compras, Ventas
-- [x] JavaScript dinámico con `fetch()` en templates POS (venta_rapida, compra_rapida, crear_movimiento)
-- [ ] JavaScript centralizado en `app.js` (actualmente inline en templates)
+### Requerimientos
+- [x] PDF de factura de venta.
+- [x] PDF de comprobante de compra.
+- [x] Ver/descargar/imprimir en navegador.
+- [x] Plantilla limpia con datos completos.
+
+### Implementado
+- [x] Motor PDF via `reportlab`.
+- [x] Vistas:
+  - `venta_pdf`
+  - `compra_pdf`
+- [x] Templates PDF:
+  - `templates/inventario/pdf/venta_factura.html`
+  - `templates/inventario/pdf/compra_comprobante.html`
+- [x] Botones de acceso en detalle de venta y compra.
 
 ---
 
-## Posibles Mejoras Futuras
+## FASE E: Requisitos Tecnicos
 
-- [ ] Extraer JavaScript inline de templates POS a `static/js/app.js`
-- [ ] Agregar paginación a listas de compras y ventas
-- [ ] Dashboard: gráficos de ventas por período y forma de pago
-- [ ] Exportación de reportes a PDF/Excel
-- [ ] Gestión de usuarios con roles y permisos
-- [ ] Notificaciones de stock bajo por email
-- [ ] Soporte multi-sucursal
-- [ ] Código de barras: escaneo desde cámara en POS
-- [ ] Historial de precios por producto
+- [x] Arquitectura modular mantenida.
+- [x] Patron MVT mantenido.
+- [x] Nuevas funcionalidades en CBV donde aplica (clientes).
+- [x] Validaciones backend de descuentos y stock.
+- [x] UI moderna en Tailwind y componentes existentes.
+- [x] Mensajes amigables de exito/error.
+- [x] Uso de `select_related` en consultas criticas.
+- [x] Compatible con PostgreSQL a nivel ORM (sin SQL acoplado a SQLite).
+
+---
+
+## FASE F: Resultado Integrable
+
+### Entregables completos incluidos
+- [x] Modelos nuevos y extendidos.
+- [x] Vistas nuevas + integracion en vistas existentes.
+- [x] URLs registradas.
+- [x] Formularios de clientes y ventas actualizados.
+- [x] Templates de clientes, reportes dinamicos y PDF.
+- [x] Lógica de permisos y grupos.
+- [x] JavaScript de POS con descuentos automáticos.
+- [x] Migraciones pendientes de generar/aplicar en entorno destino.
+
+---
+
+## Comandos de ejecucion
+
+1. Instalar dependencias
+
+```bash
+pip install -r requirements.txt
+```
+
+2. Crear migraciones y aplicarlas
+
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+3. Sembrar roles y permisos
+
+```bash
+python manage.py seed_roles
+```
+
+4. Ejecutar pruebas
+
+```bash
+python manage.py test
+```
+
+---
+
+## Pendientes recomendados (siguiente iteracion)
+
+- [ ] Factura PDF con logo embebido y formato corporativo final.
+- [ ] Exportacion de reportes dinamicos a PDF/Excel.
+- [ ] Panel de gestion de usuarios por rol desde UI (actualmente via Admin + grupos).
+- [ ] Pruebas de concurrencia para salidas simultaneas de inventario.

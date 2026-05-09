@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: Helvetica, Arial, sans-serif; font-size: 12px; color: #222; }
+    .header { border-bottom: 2px solid #1d4ed8; margin-bottom: 16px; padding-bottom: 8px; }
+    .title { font-size: 20px; font-weight: bold; color: #1d4ed8; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
+    th { background: #f3f4f6; }
+    .right { text-align: right; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="title">El Solterito - Comprobante de Compra</div>
+    <p>Compra: {{ orden.numero }} | Fecha: {{ orden.fecha_creacion|date:'d/m/Y H:i' }}</p>
+    <p>Proveedor: {{ orden.proveedor.nombre }}</p>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>Producto</th><th class="right">Cantidad</th><th class="right">Costo Unitario</th><th class="right">Subtotal</th></tr>
+    </thead>
+    <tbody>
+      {% for d in detalles %}
+      <tr>
+        <td>{{ d.producto.nombre }}</td>
+        <td class="right">{{ d.cantidad_solicitada }}</td>
+        <td class="right">COP {{ d.precio_unitario }}</td>
+        <td class="right">COP {{ d.subtotal }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <table>
+    <tr><td><strong>Total</strong></td><td class="right"><strong>COP {{ orden.total }}</strong></td></tr>
+  </table>
+</body>
+</html>

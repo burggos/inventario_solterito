@@ -10,10 +10,18 @@
             <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Ventas</h2>
             <p class="text-gray-500 dark:text-gray-400 mt-1">Historial de ventas realizadas</p>
         </div>
-        <a href="{% url 'inventario:venta_rapida' %}" class="inline-flex items-center justify-center bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800 text-white font-semibold text-sm px-4 py-2 rounded-lg shadow-sm transition">
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            Nueva Venta
-        </a>
+        <div class="flex flex-wrap gap-2">
+            <a href="{% url 'inventario:ventas_pdf_lista' %}?scope=filtered{% if query %}&q={{ query|urlencode }}{% endif %}{% if estado %}&estado={{ estado|urlencode }}{% endif %}{% if forma_pago %}&forma_pago={{ forma_pago|urlencode }}{% endif %}{% if fecha_desde %}&desde={{ fecha_desde|urlencode }}{% endif %}{% if fecha_hasta %}&hasta={{ fecha_hasta|urlencode }}{% endif %}" target="_blank" class="inline-flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-800 text-white font-semibold text-sm px-4 py-2 rounded-lg shadow-sm transition">
+                PDF filtrado
+            </a>
+            <a href="{% url 'inventario:ventas_pdf_lista' %}?scope=all" target="_blank" class="inline-flex items-center justify-center bg-slate-600 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-800 text-white font-semibold text-sm px-4 py-2 rounded-lg shadow-sm transition">
+                PDF completo
+            </a>
+            <a href="{% url 'inventario:venta_rapida' %}" class="inline-flex items-center justify-center bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800 text-white font-semibold text-sm px-4 py-2 rounded-lg shadow-sm transition">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Nueva Venta
+            </a>
+        </div>
     </div>
 
     <!-- Filtros -->
@@ -35,7 +43,7 @@
                 <label for="q" class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Buscar</label>
                 <div class="relative">
                     <svg class="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                    <input type="text" name="q" id="q" value="{{ query }}" placeholder="Número o cliente" class="w-full !max-w-full !pl-9">
+                    <input type="text" name="q" id="q" value="{{ query }}" placeholder="Número, cliente o vendedor" class="w-full !max-w-full !pl-9">
                 </div>
             </div>
             <div class="min-w-0">
@@ -82,6 +90,7 @@
                     <tr class="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
                         <th class="pb-3 pr-4">Número</th>
                         <th class="pb-3 pr-4">Cliente</th>
+                        <th class="pb-3 pr-4">Vendedor</th>
                         <th class="pb-3 pr-4">Fecha</th>
                         <th class="pb-3 pr-4 text-center">Pago</th>
                         <th class="pb-3 pr-4 text-center">Estado</th>
@@ -94,6 +103,7 @@
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
                         <td class="py-3 pr-4 font-medium text-gray-800 dark:text-gray-200">{{ venta.numero }}</td>
                         <td class="py-3 pr-4 text-gray-600 dark:text-gray-400">{{ venta.cliente_nombre }}</td>
+                        <td class="py-3 pr-4 text-gray-600 dark:text-gray-400">{{ venta.usuario_vendedor|default:'-' }}</td>
                         <td class="py-3 pr-4 text-gray-500 dark:text-gray-400">{{ venta.fecha_venta|date:"d/m/Y H:i" }}</td>
                         <td class="py-3 pr-4 text-center">
                             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">{{ venta.get_forma_pago_display }}</span>
@@ -114,7 +124,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7" class="py-8 text-center text-gray-400 dark:text-gray-500">
+                        <td colspan="8" class="py-8 text-center text-gray-400 dark:text-gray-500">
                             <svg class="w-8 h-8 mx-auto mb-2 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/></svg>
                             No hay ventas registradas.
                         </td>

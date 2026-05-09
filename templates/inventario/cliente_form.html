@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block title %}Cliente - El Solterito{% endblock %}
+{% block page_title %}Cliente{% endblock %}
+
+{% block content %}
+<div class="card-accent card-accent-blue card p-6 max-w-4xl mx-auto">
+    <h2 class="page-title mb-2">{{ view.object|default_if_none:'Nuevo Cliente' }}</h2>
+    <p class="page-subtitle mb-6">Configura datos del cliente y reglas de descuento.</p>
+
+    <form method="post" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {% csrf_token %}
+        {% for field in form %}
+        <div>
+            <label class="block text-sm font-medium mb-1">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<p class="text-red-500 text-xs mt-1">{{ field.errors|join:', ' }}</p>{% endif %}
+        </div>
+        {% endfor %}
+        <div class="md:col-span-2 flex gap-3 mt-2">
+            <button type="submit" class="btn-primary">Guardar</button>
+            <a href="{% url 'inventario:lista_clientes' %}" class="btn-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visor de Base de Datos - El Solterito</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .tables-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .table-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 5px solid #667eea;
+        }
+
+        .table-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .table-card h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .table-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            overflow-y: auto;
+        }
+
+        .modal.active {
+            display: block;
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 30px auto;
+            padding: 30px;
+            border-radius: 10px;
+            width: 95%;
+            max-width: 1200px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .modal h2 {
+            color: #333;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .columns-info {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .column-item {
+            display: inline-block;
+            background: white;
+            padding: 8px 12px;
+            margin: 5px 5px 5px 0;
+            border-radius: 5px;
+            border-left: 3px solid #667eea;
+        }
+
+        .column-name {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .column-type {
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            overflow-x: auto;
+        }
+
+        .data-table thead {
+            background: #667eea;
+            color: white;
+        }
+
+        .data-table th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border: 1px solid #ddd;
+        }
+
+        .data-table td {
+            padding: 10px 12px;
+            border: 1px solid #eee;
+        }
+
+        .data-table tbody tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+
+        .data-table tbody tr:hover {
+            background: #f0f0f0;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .summary {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .summary h2 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .summary-item {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .summary-number {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .summary-label {
+            font-size: 0.95em;
+            opacity: 0.9;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            margin-left: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .tables-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 1.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🗄️ Visor de Base de Datos</h1>
+            <p class="subtitle">El Solterito - Sistema de Inventario</p>
+        </header>
+
+        <div class="summary">
+            <h2>📊 Resumen General</h2>
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <div class="summary-number">48</div>
+                    <div class="summary-label">Productos Activos</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-number">11</div>
+                    <div class="summary-label">Proveedores</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-number">497</div>
+                    <div class="summary-label">Órdenes de Compra</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-number">2,569</div>
+                    <div class="summary-label">Ventas Registradas</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-number">5</div>
+                    <div class="summary-label">Usuarios</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-number">10</div>
+                    <div class="summary-label">Categorías</div>
+                </div>
+            </div>
+        </div>
+
+        <h2 style="color: white; margin-bottom: 20px;">📋 Tablas Disponibles</h2>
+
+        <div class="tables-grid">
+            <!-- PRODUCTOS -->
+            <div class="table-card" onclick="openModal('productos')">
+                <h3>📦 Productos</h3>
+                <p style="color: #666; font-size: 0.9em; margin-bottom: 10px;">Catálogo completo de productos</p>
+                <div class="table-stats">
+                    <div class="stat">
+                        <div class="stat-value">48</div>
+                        <div class="stat-label">Registros</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">12</div>
+                        <div class="stat-label">Columnas</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PROVEEDORES -->
+            <div class="table-card" onclick="openModal('proveedores')">
+                <h3>🏢 Proveedores</h3>
+                <p style="color: #666; font-size: 0.9em; margin-bottom: 10px;">Listado de proveedores activos</p>
+                <div class="table-stats">
+                    <div class="stat">
+                        <div class="stat-value">11</div>
+                        <div class="stat-label">Registros</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">12</div>
+                        <div class="stat-label">Columnas</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ÓRDENES DE COMPRA -->
+            <div class="table-card" onclick="openModal('ordencompra')">
+                <h3>📑 Órdenes de Compra</h3>
+                <p style="color: #666; font-size: 0.9em; margin-bottom: 10px;">Todas las compras realizadas</p>
+                <div class="table-stats">
+                    <div class="stat">
+                        <div class="stat-value">497</div>
+                        <div class="stat-label">Registros</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">10</div>
+                        <div class="stat-label">Columnas</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DETALLES COMPRA -->
+            <div class="table-card" onclick="openModal('detallecompra')">
+                <h3>🔍 Detalles de Compra</h3>
+                <p style="color: #666; font-size: 0.9em; margin-bottom: 10px;">Líneas de cada orden de compra</p>
+                <div class="table-stats">
+                    <div class="stat">
+                        <div class="stat-value">2,692</div>
+                        <div class="stat-label">Registros</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">8</div>
+                        <div class="stat-label">Columnas</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VENTAS -->
+            <div class="table-card" onclick="openModal('venta')">
+                <h3>💰 Ventas</h3>
+                <p style="color: #666; font-size: 0.9em; margin-bottom: 10px;">Registro de todas las ventas</p>
+                <div class="table-stats">
+                    <div class="stat">
+                        <div class="stat-value">2,569</div>
+                        <div class="stat-label">Registros</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">11</div>
+                        <div class="stat-label">Columnas</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DETALLES VENTA -->
+            <div class="table-card" onclick="openModal('detalleventa')">
+                <h3>🧾 Detalles de Venta</h3>
+                <p style="color: #666; font-size: 0.9em; margin-bottom: 10px;">Líneas de cada venta</p>
+                <div class="table-stats">
+                    <div class="stat">
+                        <div class="stat-value">5,810</div>
+                        <div class="stat-label">Registros</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">8</div>
+                        <div class="stat-label">Columnas</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MOVIMIENTOS -->
+            <div class="table-card" onclick="openModal('movimiento')">
+                <h3>➡️ Movimientos de Inventario</h3>
+                <p style="color: #666; font-size: 0.9em; margin-bottom: 10px;">Historial de movimientos</p>
+                <div class="table-stats">
+                    <div class="stat">
+                        <div class="stat-value">8,392</div>
+                        <div class="stat-label">Registros</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">7</div>
+                        <div class="stat-label">Columnas</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CATEGORÍAS -->
+            <div class="table-card" onclick="openModal('categoria')">
+                <h3>🏷️ Categorías</h3>
+                <p style="color: #666; font-size: 0.9em; margin-bottom: 10px;">Categorías de productos</p>
+                <div class="table-stats">
+                    <div class="stat">
+                        <div class="stat-value">10</div>
+                        <div class="stat-label">Registros</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">4</div>
+                        <div class="stat-label">Columnas</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- USUARIOS -->
+            <div class="table-card" onclick="openModal('usuarios')">
+                <h3>👥 Usuarios</h3>
+                <p style="color: #666; font-size: 0.9em; margin-bottom: 10px;">Cuentas de usuario del sistema</p>
+                <div class="table-stats">
+                    <div class="stat">
+                        <div class="stat-value">5</div>
+                        <div class="stat-label">Registros</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">11</div>
+                        <div class="stat-label">Columnas</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALES PARA CADA TABLA -->
+    
+    <!-- PRODUCTOS MODAL -->
+    <div id="productosModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('productos')">&times;</span>
+            <h2>📦 Tabla: inventario_producto</h2>
+            <div class="columns-info">
+                <strong>Columnas:</strong><br>
+                <span class="column-item"><span class="column-name">id</span> <span class="column-type">(INTEGER)</span></span>
+                <span class="column-item"><span class="column-name">nombre</span> <span class="column-type">(varchar)</span></span>
+                <span class="column-item"><span class="column-name">descripcion</span> <span class="column-type">(TEXT)</span></span>
+                <span class="column-item"><span class="column-name">precio</span> <span class="column-type">(decimal)</span></span>
+                <span class="column-item"><span class="column-name">stock</span> <span class="column-type">(integer)</span></span>
+                <span class="column-item"><span class="column-name">stock_minimo</span> <span class="column-type">(integer)</span></span>
+                <span class="column-item"><span class="column-name">categoria_id</span> <span class="column-type">(bigint)</span></span>
+            </div>
+            <p><strong>Total de registros:</strong> 48</p>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Precio</th>
+                        <th>Stock</th>
+                        <th>Stock Mínimo</th>
+                        <th>Activo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>49</td>
+                        <td>Leche entera 1L</td>
+                        <td>$4,500</td>
+                        <td>1,406</td>
+                        <td>20</td>
+                        <td>✅</td>
+                    </tr>
+                    <tr>
+                        <td>50</td>
+                        <td>Queso campesino 500g</td>
+                        <td>$12,000</td>
+                        <td>1,433</td>
+                        <td>10</td>
+                        <td>✅</td>
+                    </tr>
+                    <tr>
+                        <td>51</td>
+                        <td>Yogurt natural 1L</td>
+                        <td>$6,500</td>
+                        <td>1,196</td>
+                        <td>15</td>
+                        <td>✅</td>
+                    </tr>
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: #999;">... y 45 productos más</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- PROVEEDORES MODAL -->
+    <div id="proveedoresModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('proveedores')">&times;</span>
+            <h2>🏢 Tabla: inventario_proveedor</h2>
+            <div class="columns-info">
+                <strong>Columnas:</strong><br>
+                <span class="column-item"><span class="column-name">id</span> <span class="column-type">(INTEGER)</span></span>
+                <span class="column-item"><span class="column-name">nombre</span> <span class="column-type">(varchar)</span></span>
+                <span class="column-item"><span class="column-name">email</span> <span class="column-type">(varchar)</span></span>
+                <span class="column-item"><span class="column-name">telefono</span> <span class="column-type">(varchar)</span></span>
+                <span class="column-item"><span class="column-name">ciudad</span> <span class="column-type">(varchar)</span></span>
+                <span class="column-item"><span class="column-name">activo</span> <span class="column-type">(bool)</span></span>
+            </div>
+            <p><strong>Total de registros:</strong> 11</p>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Email</th>
+                        <th>Teléfono</th>
+                        <th>Ciudad</th>
+                        <th>Activo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>8</td>
+                        <td>Distribuidora Andina S.A.</td>
+                        <td>andina@email.com</td>
+                        <td>3001234567</td>
+                        <td>Bogotá</td>
+                        <td>✅</td>
+                    </tr>
+                    <tr>
+                        <td>9</td>
+                        <td>Lácteos del Valle</td>
+                        <td>ventas@lacteosv.com</td>
+                        <td>3109876543</td>
+                        <td>Cali</td>
+                        <td>✅</td>
+                    </tr>
+                    <tr>
+                        <td>10</td>
+                        <td>Frigorífico Nacional</td>
+                        <td>comercial@frigonal.co</td>
+                        <td>3205554433</td>
+                        <td>Medellín</td>
+                        <td>✅</td>
+                    </tr>
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: #999;">... y 8 proveedores más</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ÓRDENES DE COMPRA MODAL -->
+    <div id="ordencompraModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('ordencompra')">&times;</span>
+            <h2>📑 Tabla: inventario_ordencompra</h2>
+            <div class="columns-info">
+                <strong>Columnas:</strong><br>
+                <span class="column-item"><span class="column-name">id</span> <span class="column-type">(INTEGER)</span></span>
+                <span class="column-item"><span class="column-name">numero</span> <span class="column-type">(varchar)</span></span>
+                <span class="column-item"><span class="column-name">fecha_creacion</span> <span class="column-type">(datetime)</span></span>
+                <span class="column-item"><span class="column-name">estado</span> <span class="column-type">(varchar)</span></span>
+                <span class="column-item"><span class="column-name">total</span> <span class="column-type">(decimal)</span></span>
+                <span class="column-item"><span class="column-name">proveedor_id</span> <span class="column-type">(bigint)</span></span>
+            </div>
+            <p><strong>Total de registros:</strong> 497</p>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Número</th>
+                        <th>Fecha</th>
+                        <th>Estado</th>
+                        <th>Total</th>
+                        <th>Proveedor ID</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>12</td>
+                        <td>OC-000001</td>
+                        <td>2015-01-31 14:00:00</td>
+                        <td><span class="badge">Completada</span></td>
+                        <td>$207,367.30</td>
+                        <td>13</td>
+                    </tr>
+                    <tr>
+                        <td>13</td>
+                        <td>OC-000002</td>
+                        <td>2015-02-19 13:00:00</td>
+                        <td><span class="badge">Completada</span></td>
+                        <td>$827,435.65</td>
+                        <td>9</td>
+                    </tr>
+                    <tr>
+                        <td>14</td>
+                        <td>OC-000003</td>
+                        <td>2015-02-15 12:00:00</td>
+                        <td><span class="badge">Completada</span></td>
+                        <td>$233,934.82</td>
+                        <td>15</td>
+                    </tr>
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: #999;">... y 494 órdenes más</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- VENTAS MODAL -->
+    <div id="ventaModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('venta')">&times;</span>
+            <h2>💰 Tabla: inventario_venta</h2>
+            <div class="columns-info">
+                <strong>Columnas:</strong><br>
+                <span class="column-item"><span class="column-name">id</span> <span class="column-type">(INTEGER)</span></span>
+                <span class="column-item"><span class="column-name">numero</span> <span class="column-type">(varchar)</span></span>
+                <span class="column-item"><span class="column-name">fecha_venta</span> <span class="column-type">(datetime)</span></span>
+                <span class="column-item"><span class="column-name">cliente_nombre</span> <span class="column-type">(varchar)</span></span>
+                <span class="column-item"><span class="column-name">estado</span> <span class="column-type">(varchar)</span></span>
+                <span class="column-item"><span class="column-name">total</span> <span class="column-type">(decimal)</span></span>
+                <span class="column-item"><span class="column-name">forma_pago</span> <span class="column-type">(varchar)</span></span>
+            </div>
+            <p><strong>Total de registros:</strong> 2,569</p>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Número</th>
+                        <th>Fecha</th>
+                        <th>Cliente</th>
+                        <th>Total</th>
+                        <th>Pago</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>79</td>
+                        <td>V-000001</td>
+                        <td>2015-01-23 15:42:00</td>
+                        <td>Cliente General</td>
+                        <td>$34,000</td>
+                        <td>Efectivo</td>
+                    </tr>
+                    <tr>
+                        <td>80</td>
+                        <td>V-000009</td>
+                        <td>2015-01-10 14:34:00</td>
+                        <td>Miguel Rojas</td>
+                        <td>$4,000</td>
+                        <td>Efectivo</td>
+                    </tr>
+                    <tr>
+                        <td>81</td>
+                        <td>V-000011</td>
+                        <td>2015-02-09 22:27:00</td>
+                        <td>Diego López</td>
+                        <td>$8,000</td>
+                        <td>Tarjeta</td>
+                    </tr>
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: #999;">... y 2,566 ventas más</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- DETALLES VENTA MODAL -->
+    <div id="detalleventaModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('detalleventa')">&times;</span>
+            <h2>🧾 Tabla: inventario_detalleventa</h2>
+            <div class="columns-info">
+                <strong>Columnas:</strong><br>
+                <span class="column-item"><span class="column-name">id</span> <span class="column-type">(INTEGER)</span></span>
+                <span class="column-item"><span class="column-name">cantidad</span> <span class="column-type">(integer)</span></span>
+                <span class="column-item"><span class="column-name">precio_unitario</span> <span class="column-type">(decimal)</span></span>
+                <span class="column-item"><span class="column-name">subtotal</span> <span class="column-type">(decimal)</span></span>
+                <span class="column-item"><span class="column-name">venta_id</span> <span class="column-type">(bigint)</span></span>
+                <span class="column-item"><span class="column-name">producto_id</span> <span class="column-type">(bigint)</span></span>
+            </div>
+            <p><strong>Total de registros:</strong> 5,810</p>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Cantidad</th>
+                        <th>Precio Unit.</th>
+                        <th>Subtotal</th>
+                        <th>Venta ID</th>
+                        <th>Producto ID</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>249</td>
+                        <td>4</td>
+                        <td>$7,500</td>
+                        <td>$30,000</td>
+                        <td>79</td>
+                        <td>54</td>
+                    </tr>
+                    <tr>
+                        <td>250</td>
+                        <td>2</td>
+                        <td>$2,000</td>
+                        <td>$4,000</td>
+                        <td>79</td>
+                        <td>55</td>
+                    </tr>
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: #999;">... y 5,808 líneas más</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- DETALLES COMPRA MODAL -->
+    <div id="detallecompraModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('detallecompra')">&times;</span>
+            <h2>🔍 Tabla: inventario_detallecompra</h2>
+            <div class="columns-info">
+                <strong>Columnas:</strong><br>
+                <span class="column-item"><span class="column-name">id</span> <span class="column-type">(INTEGER)</span></span>
+                <span class="column-item"><span class="column-name">cantidad_solicitada</span> <span class="column-type">(integer)</span></span>
+                <span class="column-item"><span class="column-name">cantidad_recibida</span> <span class="column-type">(integer)</span></span>
+                <span class="column-item"><span class="column-name">precio_unitario</span> <span class="column-type">(decimal)</span></span>
+                <span class="column-item"><span class="column-name">subtotal</span> <span class="column-type">(decimal)</span></span>
+                <span class="column-item"><span class="column-name">orden_compra_id</span> <span class="column-type">(bigint)</span></span>
+            </div>
+            <p><strong>Total de registros:</strong> 2,692</p>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Cant. Solicitada</th>
+                        <th>Cant. Recibida</th>
+                        <th>Precio Unit.</th>
+                        <th>Subtotal</th>
+                        <th>OC ID</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>42</td>
+                        <td>24</td>
+                        <td>24</td>
+                        <td>$5,240.97</td>
+                        <td>$125,783.28</td>
+                        <td>12</td>
+                    </tr>
+                    <tr>
+                        <td>43</td>
+                        <td>22</td>
+                        <td>22</td>
+                        <td>$2,312.41</td>
+                        <td>$50,873.02</td>
+                        <td>12</td>
+                    </tr>
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: #999;">... y 2,690 líneas más</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- MOVIMIENTOS MODAL -->
+    <div id="movimientoModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('movimiento')">&times;</span>
+            <h2>➡️ Tabla: inventario_movimiento</h2>
+            <div class="columns-info">
+                <strong>Columnas:</strong><br>
+                <span class="column-item"><span class="column-name">id</span> <span class="column-type">(INTEGER)</span></span>
+                <span class="column-item"><span class="column-name">tipo</span> <span class="column-type">(varchar)</span></span>
+                <span class="column-item"><span class="column-name">cantidad</span> <span class="column-type">(integer)</span></span>
+                <span class="column-item"><span class="column-name">fecha</span> <span class="column-type">(datetime)</span></span>
+                <span class="column-item"><span class="column-name">descripcion</span> <span class="column-type">(TEXT)</span></span>
+                <span class="column-item"><span class="column-name">producto_id</span> <span class="column-type">(bigint)</span></span>
+            </div>
+            <p><strong>Total de registros:</strong> 8,392</p>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Tipo</th>
+                        <th>Cantidad</th>
+                        <th>Fecha</th>
+                        <th>Descripción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>347</td>
+                        <td><span class="badge">entrada</span></td>
+                        <td>24</td>
+                        <td>2015-01-31 12:46:00</td>
+                        <td>Entrada por OC-000001</td>
+                    </tr>
+                    <tr>
+                        <td>348</td>
+                        <td><span class="badge">entrada</span></td>
+                        <td>22</td>
+                        <td>2015-01-31 18:05:00</td>
+                        <td>Entrada por OC-000001</td>
+                    </tr>
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: #999;">... y 8,390 movimientos más</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- CATEGORÍAS MODAL -->
+    <div id="categoriaModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('categoria')">&times;</span>
+            <h2>🏷️ Tabla: inventario_categoria</h2>
+            <div class="columns-info">
+                <strong>Columnas:</strong><br>
+                <span class="column-item"><span class="column-name">id</span> <span class="column-type">(INTEGER)</span></span>
+                <span class="column-item"><span class="column-name">nombre</span> <span class="column-type">(varchar)</span></span>
+                <span class="column-item"><span class="column-name">descripcion</span> <span class="column-type">(TEXT)</span></span>
+                <span class="column-item"><span class="column-name">fecha_creacion</span> <span class="column-type">(datetime)</span></span>
+            </div>
+            <p><strong>Total de registros:</strong> 10</p>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Descripción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>11</td>
+                        <td>Lácteos</td>
+                        <td>Leche, queso, yogurt y derivados</td>
+                    </tr>
+                    <tr>
+                        <td>12</td>
+                        <td>Bebidas</td>
+                        <td>Gaseosas, jugos, agua y licores</td>
+                    </tr>
+                    <tr>
+                        <td>13</td>
+                        <td>Carnes y Embutidos</td>
+                        <td>Res, pollo, cerdo, jamón, salchichas</td>
+                    </tr>
+                    <tr>
+                        <td colspan="3" style="text-align: center; color: #999;">... y 7 categorías más</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- USUARIOS MODAL -->
+    <div id="usuariosModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('usuarios')">&times;</span>
+            <h2>👥 Tabla: auth_user</h2>
+            <div class="columns-info">
+                <strong>Columnas:</strong><br>
+                <span class="column-item"><span class="column-name">id</span> <span class="column-type">(INTEGER)</span></span>
+                <span class="column-item"><span class="column-name">username</span> <span class="column-type">(varchar)</span></span>
+                <span class="column-item"><span class="column-name">email</span> <span class="column-type">(varchar)</span></span>
+                <span class="column-item"><span class="column-name">first_name</span> <span class="column-type">(varchar)</span></span>
+                <span class="column-item"><span class="column-name">last_name</span> <span class="column-type">(varchar)</span></span>
+                <span class="column-item"><span class="column-name">is_staff</span> <span class="column-type">(bool)</span></span>
+                <span class="column-item"><span class="column-name">is_superuser</span> <span class="column-type">(bool)</span></span>
+                <span class="column-item"><span class="column-name">is_active</span> <span class="column-type">(bool)</span></span>
+            </div>
+            <p><strong>Total de registros:</strong> 5</p>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Staff</th>
+                        <th>Superuser</th>
+                        <th>Activo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>burggos</td>
+                        <td>burggos@gmail.com</td>
+                        <td>✅</td>
+                        <td>✅</td>
+                        <td>✅</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>testadmin</td>
+                        <td>-</td>
+                        <td>✅</td>
+                        <td>✅</td>
+                        <td>✅</td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>admin</td>
+                        <td>-</td>
+                        <td>✅</td>
+                        <td>✅</td>
+                        <td>✅</td>
+                    </tr>
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: #999;">... y 2 usuarios más</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        function openModal(tableName) {
+            const modalId = tableName + 'Modal';
+            document.getElementById(modalId).classList.add('active');
+        }
+
+        function closeModal(tableName) {
+            const modalId = tableName + 'Modal';
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        // Cerrar modal al hacer clic fuera
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.classList.remove('active');
+            }
+        }
+    </script>
+</body>
+</html>

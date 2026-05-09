@@ -10,10 +10,18 @@
             <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Órdenes de Compra</h2>
             <p class="text-gray-500 dark:text-gray-400 mt-1">Gestiona tus compras a proveedores</p>
         </div>
-        <a href="{% url 'inventario:compra_rapida' %}" class="inline-flex items-center justify-center bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white font-semibold text-sm px-4 py-2 rounded-lg shadow-sm transition">
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            Nueva Compra
-        </a>
+        <div class="flex flex-wrap gap-2">
+            <a href="{% url 'inventario:compras_pdf_lista' %}?scope=filtered{% if proveedor_seleccionado %}&proveedor={{ proveedor_seleccionado|urlencode }}{% endif %}{% if estado %}&estado={{ estado|urlencode }}{% endif %}{% if fecha_desde %}&desde={{ fecha_desde|urlencode }}{% endif %}{% if fecha_hasta %}&hasta={{ fecha_hasta|urlencode }}{% endif %}" target="_blank" class="inline-flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-800 text-white font-semibold text-sm px-4 py-2 rounded-lg shadow-sm transition">
+                PDF filtrado
+            </a>
+            <a href="{% url 'inventario:compras_pdf_lista' %}?scope=all" target="_blank" class="inline-flex items-center justify-center bg-slate-600 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-800 text-white font-semibold text-sm px-4 py-2 rounded-lg shadow-sm transition">
+                PDF completo
+            </a>
+            <a href="{% url 'inventario:compra_rapida' %}" class="inline-flex items-center justify-center bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white font-semibold text-sm px-4 py-2 rounded-lg shadow-sm transition">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Nueva Compra
+            </a>
+        </div>
     </div>
 
     <!-- Filtros -->

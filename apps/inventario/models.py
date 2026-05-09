@@ -1,4 +1,7 @@
 from django.db import models
+from django.db import transaction
+from django.db.models import F
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 class Categoria(models.Model):
@@ -38,6 +41,9 @@ class Producto(models.Model):
         verbose_name = "Producto"
         verbose_name_plural = "Productos"
         ordering = ['nombre']
+        permissions = [
+            ('manage_product_catalog', 'Puede gestionar catalogo de productos'),
+        ]
 
     def __str__(self):
         return f"{self.nombre} (Stock: {self.stock})"
@@ -85,9 +91,40 @@ class Movimiento(models.Model):
         verbose_name = "Movimiento"
         verbose_name_plural = "Movimientos"
         ordering = ['-fecha']
+        permissions = [
+            ('manage_inventory', 'Puede gestionar inventario y stock'),
+        ]
 
     def __str__(self):
         return f"{self.tipo} - {self.producto.nombre} ({self.cantidad})"
+
+    def save(self, *args, **kwargs):
+        """
+        Actualiza stock y registra movimiento en una sola transacción.
+        Evita salidas que dejen stock negativo o movimientos sin impacto en stock.
+        """
+        if self.pk:
+            return super().save(*args, **kwargs)
+
+        with transaction.atomic():
+            if self.tipo == 'entrada':
+                updated = Producto.objects.filter(pk=self.producto_id).update(
+                    stock=F('stock') + self.cantidad
+                )
+                if not updated:
+                    raise ValidationError('No se pudo actualizar stock del producto.')
+
+            elif self.tipo == 'salida':
+                updated = Producto.objects.filter(
+                    pk=self.producto_id,
+                    stock__gte=self.cantidad,
+                ).update(stock=F('stock') - self.cantidad)
+                if not updated:
+                    raise ValidationError(
+                        {'cantidad': f'Stock insuficiente para salida de {self.producto.nombre}.'}
+                    )
+
+            super().save(*args, **kwargs)
 
 
 # ============================================================================
@@ -112,6 +149,62 @@ class Proveedor(models.Model):
         verbose_name = "Proveedor"
         verbose_name_plural = "Proveedores"
         ordering = ['nombre']
+
+
+class Cliente(models.Model):
+    """Cliente con reglas de descuento personalizadas."""
+    nombre = models.CharField(max_length=200)
+    documento = models.CharField(max_length=50, blank=True, null=True, unique=True)
+    email = models.EmailField(blank=True)
+    telefono = models.CharField(max_length=20, blank=True)
+    activo = models.BooleanField(default=True)
+
+    descuento_fijo = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    descuento_temporal = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    descuento_temporal_inicio = models.DateField(blank=True, null=True)
+    descuento_temporal_fin = models.DateField(blank=True, null=True)
+    descuento_fidelidad = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    umbral_fidelidad = models.PositiveIntegerField(default=5)
+
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Cliente'
+        verbose_name_plural = 'Clientes'
+        ordering = ['nombre']
+        permissions = [
+            ('manage_clients', 'Puede gestionar clientes y descuentos'),
+        ]
+
+    def __str__(self):
+        return self.nombre
+
+    def descuento_vigente(self, fecha=None):
+        """
+        Descuento total aplicable al cliente.
+        Suma fijo + temporal vigente + fidelidad y limita a 100%.
+        """
+        from decimal import Decimal
+
+        fecha = fecha or timezone.now().date()
+        total = Decimal(self.descuento_fijo or 0)
+
+        if (
+            self.descuento_temporal > 0
+            and self.descuento_temporal_inicio
+            and self.descuento_temporal_fin
+            and self.descuento_temporal_inicio <= fecha <= self.descuento_temporal_fin
+        ):
+            total += Decimal(self.descuento_temporal)
+
+        compras_cliente = self.ventas.filter(estado='completada').count()
+        if self.umbral_fidelidad and compras_cliente >= self.umbral_fidelidad:
+            total += Decimal(self.descuento_fidelidad or 0)
+
+        if total < 0:
+            return Decimal('0')
+        return min(total, Decimal('100'))
 
     def __str__(self):
         return self.nombre
@@ -193,8 +286,11 @@ class Venta(models.Model):
     
     numero = models.CharField(max_length=50, unique=True, blank=True)
     fecha_venta = models.DateTimeField(auto_now_add=True)
+    cliente = models.ForeignKey(Cliente, on_delete=models.SET_NULL, null=True, blank=True, related_name='ventas')
     cliente_nombre = models.CharField(max_length=200, default="Cliente General")
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='completada')
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    descuento_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     forma_pago = models.CharField(max_length=20, choices=PAGO_CHOICES, default='efectivo')
     notas = models.TextField(blank=True)
@@ -204,6 +300,10 @@ class Venta(models.Model):
         verbose_name = "Venta"
         verbose_name_plural = "Ventas"
         ordering = ['-fecha_venta']
+        permissions = [
+            ('register_sales', 'Puede registrar ventas'),
+            ('generate_invoice_pdf', 'Puede generar facturas PDF'),
+        ]
 
     def __str__(self):
         return f"V-{self.numero} - {self.cliente_nombre}"
@@ -237,3 +337,18 @@ class DetalleVenta(models.Model):
         descuento = (self.cantidad * self.precio_unitario) * (self.descuento_porcentaje / 100)
         self.subtotal = (self.cantidad * self.precio_unitario) - descuento
         super().save(*args, **kwargs)
+
+
+class HistorialDescuentoCliente(models.Model):
+    """Historial de descuentos aplicados durante ventas."""
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='historial_descuentos')
+    venta = models.ForeignKey(Venta, on_delete=models.CASCADE, related_name='historial_descuentos')
+    porcentaje_aplicado = models.DecimalField(max_digits=5, decimal_places=2)
+    monto_descuento = models.DecimalField(max_digits=12, decimal_places=2)
+    tipo = models.CharField(max_length=50, default='combinado')
+    fecha = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Historial de Descuento'
+        verbose_name_plural = 'Historial de Descuentos'
+        ordering = ['-fecha']
