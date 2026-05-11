@@ -4,7 +4,7 @@ Aplicación web desarrollada con Django para la gestión integral de inventario,
 
 ---
 
-## 📌 Características principales
+## Características principales
 
 - **Dashboard** con resumen de productos, stock bajo, ventas y compras recientes
 - **Gestión de productos** con categorías, código de barras, imágenes y alertas de stock mínimo
@@ -18,16 +18,17 @@ Aplicación web desarrollada con Django para la gestión integral de inventario,
 
 ---
 
-## 🛠️ Tecnologías
+## Tecnologías
 
-- **Backend:** Django 3.2
+- **Backend:** Django 3.2.12
 - **Frontend:** Tailwind CSS (CDN) + CSS personalizado
-- **Base de datos:** SQLite (desarrollo)
-- **Lenguaje:** Python 3.8+
+- **Base de datos:** SQLite (desarrollo) / PostgreSQL (producción en Render)
+- **Servidor:** Gunicorn + WhiteNoise
+- **Lenguaje:** Python 3.11.9
 
 ---
 
-## ✅ Requisitos
+## Requisitos
 
 - Python 3.8+
 - pip
@@ -35,7 +36,9 @@ Aplicación web desarrollada con Django para la gestión integral de inventario,
 
 ---
 
-## 🚀 Instalación y ejecución
+## Instalación y ejecución
+
+### Pasos comunes (todos los sistemas operativos)
 
 1. Clonar el repositorio:
 
@@ -44,12 +47,48 @@ git clone https://github.com/burggos/inventario_solterito.git
 cd inventario_solterito
 ```
 
+### Linux / macOS
+
 2. Crear y activar un entorno virtual:
 
 ```bash
 python3 -m venv .venv
-source .venv/bin/activate       # Linux / macOS
-# .venv\Scripts\activate        # Windows
+source .venv/bin/activate
+```
+
+3. Instalar dependencias:
+
+```bash
+pip install -r requirements.txt
+```
+
+4. Aplicar migraciones:
+
+```bash
+python manage.py migrate
+```
+
+5. Crear un superusuario:
+
+```bash
+python manage.py createsuperuser
+```
+
+6. Iniciar el servidor:
+
+```bash
+python manage.py runserver
+```
+
+7. Abrir en el navegador: `http://127.0.0.1:8000/`
+
+### Windows
+
+2. Crear y activar un entorno virtual:
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate
 ```
 
 3. Instalar dependencias:
@@ -80,25 +119,29 @@ python manage.py runserver
 
 ---
 
-## 🧱 Estructura del proyecto
+## Estructura del proyecto
 
 ```text
 inventario_solterito/
 ├── manage.py
-├── requirements.txt
-├── db.sqlite3
+├── requirements.txt            # Dependencias consolidadas (desarrollo + producción)
+├── render.yaml                 # Configuración de deployment en Render
+├── .python-version             # Pin de Python (3.11.9)
+├── .env.example                # Template de variables de entorno
+├── db.sqlite3                  # Base de datos (desarrollo)
 ├── solterito_inventario/       # Configuración del proyecto Django
-│   ├── settings.py
+│   ├── settings.py             # Soporta SQLite (dev) y PostgreSQL (prod)
 │   ├── urls.py
-│   ├── wsgi.py
+│   ├── wsgi.py                 # WSGI para Gunicorn
 │   └── asgi.py
 ├── apps/
 │   └── inventario/             # Aplicación principal
 │       ├── models.py           # Categoría, Producto, Movimiento, Proveedor, OrdenCompra, Venta
 │       ├── views.py            # Vistas y endpoints API (AJAX)
-│       ├── forms.py            # Formularios
+│       ├── forms.py            # Formularios con validaciones de rol
 │       ├── urls.py             # Rutas de la aplicación
 │       ├── signals.py          # Señales Django
+│       ├── permissions.py      # Decoradores de permisos por rol
 │       ├── admin.py            # Configuración del admin
 │       ├── tests.py            # Pruebas unitarias
 │       └── migrations/
@@ -116,7 +159,7 @@ inventario_solterito/
 
 ---
 
-## 📋 Modelos de datos
+## Modelos de datos
 
 | Modelo | Descripción |
 |--------|-------------|
@@ -129,7 +172,7 @@ inventario_solterito/
 
 ---
 
-## 🌐 Rutas principales
+## Rutas principales
 
 | Ruta | Función |
 |------|---------|
@@ -145,7 +188,25 @@ inventario_solterito/
 
 ---
 
-## 🧪 Pruebas
+## Deployment en Render
+
+La aplicación está configurada para ejecutarse en [Render](https://render.com) con PostgreSQL gratuito.
+
+**Configuración actual:**
+- **Python:** 3.11.9 (definido en `.python-version`)
+- **Base de datos:** PostgreSQL (libre)
+- **Servidor:** Gunicorn con WhiteNoise para státicos
+- **Migraciones:** Se ejecutan automáticamente en `preDeployCommand`
+
+**Variables de entorno requeridas en Render:**
+- `DJANGO_SECRET_KEY` (generado automáticamente)
+- `DJANGO_DEBUG=false`
+- `DJANGO_ALLOWED_HOSTS=.onrender.com`
+- `DATABASE_URL` (vinculada automáticamente a la BD PostgreSQL)
+
+---
+
+## Pruebas
 
 ```bash
 python manage.py test
@@ -153,14 +214,17 @@ python manage.py test
 
 ---
 
-## ℹ️ Notas
+## Notas
 
 - El frontend usa Tailwind CSS desde CDN — no se requiere npm.
 - `db.sqlite3` se incluye como base de datos de desarrollo.
 - Las imágenes de productos se almacenan en `media/productos/`.
+- **Dependencias consolidadas:** Un único `requirements.txt` cubre desarrollo y producción.
+- **Entorno virtual:** Usa `.venv` localmente; `.gitignore` previene versionado accidental.
+- **Státicos:** Se recompilan en el build de Render; no se versiona la carpeta `staticfiles/`.
 
 ---
 
-## 📄 Licencia
+## Licencia
 
 Proyecto desarrollado con fines académicos para el Instituto Tecnológico San Agustín.
