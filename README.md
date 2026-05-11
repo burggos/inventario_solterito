@@ -47,9 +47,9 @@ cd inventario_solterito
 2. Crear y activar un entorno virtual:
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate       # Linux / macOS
-# venv\Scripts\activate        # Windows
+python3 -m venv .venv
+source .venv/bin/activate       # Linux / macOS
+# .venv\Scripts\activate        # Windows
 ```
 
 3. Instalar dependencias:
