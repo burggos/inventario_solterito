@@ -44,7 +44,7 @@ Duracion sugerida: 1 a 2 dias
 
 - [x] Limpiar requirements.txt a dependencias reales del proyecto.
 - [x] Incluir beautifulsoup4 para suite completa de pruebas.
-- [x] Alinear versions entre requirements.txt, requirements_clean.txt y requirements_deploy.txt.
+- [x] Consolidar dependencias en un unico requirements.txt.
 - [x] Agregar `pip install -r requirements.txt && python manage.py test` al CI.
 - [ ] Evaluar upgrade de Django 3.2 LTS a rama soportada (plan de migracion incremental).
 
