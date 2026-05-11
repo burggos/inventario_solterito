@@ -1,6 +1,7 @@
 import os
 import sys
 from pathlib import Path
+import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -82,8 +83,14 @@ TEMPLATES = [
 WSGI_APPLICATION = 'solterito_inventario.wsgi.application'
 
 # Base de datos
+database_url = os.environ.get('DATABASE_URL') or os.environ.get('DJANGO_DATABASE_URL')
 DB_ENGINE = os.environ.get('DJANGO_DB_ENGINE', 'sqlite').lower()
-if DB_ENGINE == 'postgres':
+
+if database_url:
+    DATABASES = {
+        'default': dj_database_url.parse(database_url, conn_max_age=600, ssl_require=IS_PRODUCTION)
+    }
+elif DB_ENGINE == 'postgres':
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
