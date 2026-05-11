@@ -24,11 +24,11 @@ class Command(BaseCommand):
         ]
         vendedor.permissions.set(Permission.objects.filter(codename__in=vendedor_codes))
 
-        # Bodeguero: inventario + compras, sin ventas
+        # Bodeguero: compras + inventario operativo, sin ventas ni ajustes de inventario
         bodeguero_codes = [
             'view_producto', 'add_producto', 'change_producto',
             'view_categoria',
-            'view_movimiento', 'add_movimiento', 'change_movimiento', 'manage_inventory',
+            'view_movimiento', 'add_movimiento', 'change_movimiento',
             'view_ordencompra', 'add_ordencompra', 'change_ordencompra',
             'view_detallecompra', 'add_detallecompra', 'change_detallecompra',
             'view_proveedor', 'add_proveedor', 'change_proveedor',

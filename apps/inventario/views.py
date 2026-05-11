@@ -256,7 +256,7 @@ def crear_movimiento(request):
             pass
     
     if request.method == 'POST':
-        form = MovimientoForm(request.POST)
+        form = MovimientoForm(request.POST, user=request.user)
         if form.is_valid():
             movimiento = form.save(commit=False)
             movimiento.usuario = request.user.username  # si tienes campo usuario
@@ -273,7 +273,7 @@ def crear_movimiento(request):
                 except Producto.DoesNotExist:
                     pass
     else:
-        form = MovimientoForm(initial=initial)
+        form = MovimientoForm(initial=initial, user=request.user)
     
     return render(request, 'inventario/crear_movimiento.html', {
         'form': form,

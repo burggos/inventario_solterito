@@ -63,9 +63,15 @@ class MovimientoForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         self.fields['descripcion'].required = True
         self.fields['descripcion'].help_text = 'Obligatorio: describe el motivo del ajuste'
+        # Los bodegueros no pueden crear movimientos de tipo ajuste.
+        if self.user and not self.user.is_superuser and not self.user.groups.filter(name='Administrador').exists():
+            self.fields['tipo'].choices = [
+                (value, label) for value, label in self.fields['tipo'].choices if value != 'ajuste'
+            ]
         input_cls = 'w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 dark:bg-gray-700 dark:text-white transition'
         for name in self.fields:
             self.fields[name].widget.attrs.setdefault('class', '')
@@ -80,6 +86,14 @@ class MovimientoForm(forms.ModelForm):
         if tipo == 'salida' and producto and cantidad:
             if producto.stock < cantidad:
                 raise forms.ValidationError(f'Stock insuficiente. Stock actual: {producto.stock}')
+
+        if (
+            tipo == 'ajuste'
+            and self.user
+            and not self.user.is_superuser
+            and not self.user.groups.filter(name='Administrador').exists()
+        ):
+            raise forms.ValidationError('No tienes permisos para registrar ajustes de inventario.')
 
 
 class ProductoEditForm(forms.ModelForm):
