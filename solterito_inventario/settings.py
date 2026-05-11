@@ -96,7 +96,12 @@ if DB_ENGINE == 'postgres':
     }
 else:
     sqlite_path = Path(os.environ.get('DJANGO_SQLITE_PATH', str(BASE_DIR / 'db.sqlite3')))
-    sqlite_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        sqlite_path.parent.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        # En algunos builders (ej. Render), /var/data no es escribible durante build.
+        # El disco se monta en runtime, por lo que no debemos romper la carga de settings.
+        pass
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
