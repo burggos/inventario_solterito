@@ -215,17 +215,6 @@
         </div>
     </header>
 
-    <!-- Flash messages -->
-    {% if messages %}
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            {% for message in messages %}
-                showToast('{{ message|escapejs }}', '{{ message.tags|default:"info" }}');
-            {% endfor %}
-        });
-    </script>
-    {% endif %}
-
     <!-- Main content -->
     <main id="main-content" tabindex="-1" class="flex-1 p-4 sm:p-6 lg:p-8">
         {% block content %}{% endblock %}
@@ -238,19 +227,18 @@
 </div>
 {% else %}
     <!-- Login page (no sidebar) -->
-    {% if messages %}
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            {% for message in messages %}
-                showToast('{{ message|escapejs }}', '{{ message.tags|default:"info" }}');
-            {% endfor %}
-        });
-    </script>
-    {% endif %}
     <main>
         {% block login_content %}{% endblock %}
     </main>
 {% endif %}
+
+    {% if messages %}
+    <div id="flash-messages-data" class="hidden" hidden aria-hidden="true">
+        {% for message in messages %}
+        <div data-flash-message data-message="{{ message|escapejs }}" data-type="{{ message.tags|default:'info' }}"></div>
+        {% endfor %}
+    </div>
+    {% endif %}
 
     <!-- Toast container -->
     <div id="toast-container" class="fixed bottom-4 right-4 z-[60] space-y-2"></div>

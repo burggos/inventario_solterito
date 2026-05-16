@@ -100,7 +100,7 @@
                     class="w-full py-3 bg-teal-600 hover:bg-teal-700 dark:bg-teal-700 dark:hover:bg-teal-800 text-white font-semibold rounded-lg transition text-sm">
                     Registrar Ajuste
                 </button>
-                <a href="javascript:history.back()"
+                <a href="{% if selected_product %}{% url 'inventario:detalle_producto' selected_product.id %}{% else %}{% url 'inventario:lista_movimientos' %}{% endif %}" data-history-back
                     class="block w-full mt-2 py-2 text-xs text-center text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition">
                     Cancelar
                 </a>

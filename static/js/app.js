@@ -153,6 +153,41 @@
 		});
 	}
 
+	function initFlashMessages() {
+		document.querySelectorAll('[data-flash-message]').forEach(function (item) {
+			var message = item.getAttribute('data-message');
+			var type = item.getAttribute('data-type') || 'info';
+			if (message) showToast(message, type);
+		});
+	}
+
+	function initHistoryBackLinks() {
+		document.querySelectorAll('[data-history-back]').forEach(function (link) {
+			link.addEventListener('click', function (event) {
+				event.preventDefault();
+				var fallbackUrl = link.getAttribute('href');
+				var referrer = document.referrer;
+				var hasSameOriginReferrer = false;
+				if (referrer) {
+					try {
+						hasSameOriginReferrer = new URL(referrer).origin === window.location.origin;
+					} catch (error) {
+						hasSameOriginReferrer = false;
+					}
+				}
+
+				if (window.history.length > 1 && hasSameOriginReferrer) {
+					window.history.back();
+					return;
+				}
+
+				if (fallbackUrl) {
+					window.location.assign(fallbackUrl);
+				}
+			});
+		});
+	}
+
 	function updateThemeUI(mode) {
 		var html = document.documentElement;
 		var iconSun = document.getElementById('theme-icon-sun');
@@ -325,6 +360,8 @@
 		initSidebar();
 		initUserDropdown();
 		initToastClose();
+		initFlashMessages();
+		initHistoryBackLinks();
 		initTheme();
 	});
 })();
