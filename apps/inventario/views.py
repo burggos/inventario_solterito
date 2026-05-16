@@ -146,10 +146,59 @@ def detalle_producto(request, pk):
         pk=pk,
         activo=True,
     )
-    movimientos = producto.movimientos.all().order_by('-fecha')[:10]  # últimos 10 movimientos
+    movimientos = list(producto.movimientos.all().order_by('-fecha')[:12])
+
+    hoy = timezone.now().date()
+    inicio = hoy - timedelta(days=13)
+    movimientos_rango = list(
+        producto.movimientos.filter(fecha__date__gte=inicio, fecha__date__lte=hoy).order_by('fecha')
+    )
+
+    # Stock al inicio de la ventana para reconstruir cierres diarios.
+    neto_rango = 0
+    for mov in movimientos_rango:
+        if mov.tipo == 'entrada':
+            neto_rango += mov.cantidad
+        elif mov.tipo == 'salida':
+            neto_rango -= mov.cantidad
+
+    stock_inicio = producto.stock - neto_rango
+    stock_cursor = stock_inicio
+    movimientos_por_dia = {}
+    for mov in movimientos_rango:
+        dia = mov.fecha.date()
+        if dia not in movimientos_por_dia:
+            movimientos_por_dia[dia] = {'entrada': 0, 'salida': 0}
+        if mov.tipo == 'entrada':
+            movimientos_por_dia[dia]['entrada'] += mov.cantidad
+        elif mov.tipo == 'salida':
+            movimientos_por_dia[dia]['salida'] += mov.cantidad
+
+    tendencia_stock = []
+    cursor_fecha = inicio
+    while cursor_fecha <= hoy:
+        resumen = movimientos_por_dia.get(cursor_fecha, {'entrada': 0, 'salida': 0})
+        variacion = resumen['entrada'] - resumen['salida']
+        stock_cursor += variacion
+        tendencia_stock.append(
+            {
+                'fecha': cursor_fecha.strftime('%d/%m'),
+                'stock': max(stock_cursor, 0),
+                'entrada': resumen['entrada'],
+                'salida': resumen['salida'],
+                'variacion': variacion,
+            }
+        )
+        cursor_fecha += timedelta(days=1)
+
+    stock_max = max((p['stock'] for p in tendencia_stock), default=0)
+
     context = {
         'producto': producto,
-        'movimientos': movimientos
+        'movimientos': movimientos,
+        'tendencia_stock': tendencia_stock,
+        'stock_max_tendencia': stock_max,
+        'hoy_label': hoy.strftime('%d/%m'),
     }
     return render(request, 'inventario/detalle_producto.html', context)
 
