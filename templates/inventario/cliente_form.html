@@ -4,23 +4,67 @@
 {% block page_title %}Cliente{% endblock %}
 
 {% block content %}
-<div class="card-accent card-accent-blue card p-6 max-w-4xl mx-auto">
-    <h2 class="page-title mb-2">{{ view.object|default_if_none:'Nuevo Cliente' }}</h2>
-    <p class="page-subtitle mb-6">Configura datos del cliente y reglas de descuento.</p>
+<div class="max-w-4xl mx-auto">
+    {% include 'includes/page_header.html' with title=view.object|default_if_none:'Nuevo Cliente' subtitle='Configura los datos del cliente y sus reglas de descuento.' %}
 
-    <form method="post" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {% csrf_token %}
-        {% for field in form %}
-        <div>
-            <label class="block text-sm font-medium mb-1">{{ field.label }}</label>
-            {{ field }}
-            {% if field.errors %}<p class="text-red-500 text-xs mt-1">{{ field.errors|join:', ' }}</p>{% endif %}
-        </div>
-        {% endfor %}
-        <div class="md:col-span-2 flex gap-3 mt-2">
-            <button type="submit" class="btn-primary">Guardar</button>
-            <a href="{% url 'inventario:lista_clientes' %}" class="btn-secondary">Cancelar</a>
-        </div>
-    </form>
+    <div class="card card-accent card-accent-blue p-6">
+        <form method="post" novalidate class="space-y-6">
+            {% csrf_token %}
+
+            {% if form.errors %}
+            <div class="alert-danger">
+                <p class="font-semibold">Por favor corrige los errores del formulario.</p>
+                {% if form.non_field_errors %}
+                <div class="mt-2 text-sm">{{ form.non_field_errors }}</div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <section class="space-y-4">
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">Datos principales</h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Información básica para identificar y contactar al cliente.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {% for field in form %}
+                        {% if field.name == 'nombre' or field.name == 'documento' or field.name == 'email' or field.name == 'telefono' %}
+                            {% include 'includes/form_field.html' with field=field %}
+                        {% endif %}
+                    {% endfor %}
+                    <div class="w-full md:col-span-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 px-4 py-3">
+                        {% for field in form %}
+                            {% if field.name == 'activo' %}
+                            <label for="{{ field.id_for_label }}" class="flex items-center gap-3 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                {{ field }}
+                                <span>{{ field.label }}</span>
+                            </label>
+                            {% if field.help_text %}<p class="text-gray-500 dark:text-gray-400 text-xs mt-2">{{ field.help_text }}</p>{% endif %}
+                            {% if field.errors %}<p class="text-red-500 text-sm mt-2">{{ field.errors.0 }}</p>{% endif %}
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+
+            <section class="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-6">
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">Descuentos y fidelización</h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Define descuentos permanentes, promociones temporales y beneficios por fidelidad.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {% for field in form %}
+                        {% if field.name != 'nombre' and field.name != 'documento' and field.name != 'email' and field.name != 'telefono' and field.name != 'activo' %}
+                            {% include 'includes/form_field.html' with field=field %}
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </section>
+
+            <div class="flex flex-col sm:flex-row sm:space-x-3 space-y-3 sm:space-y-0 pt-2">
+                <button type="submit" class="btn-primary">Guardar Cliente</button>
+                <a href="{% url 'inventario:lista_clientes' %}" class="btn-secondary">Cancelar</a>
+            </div>
+        </form>
+    </div>
 </div>
 {% endblock %}
