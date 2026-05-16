@@ -33,3 +33,6 @@ db.sqlite3
 *.backup
 *.old
 *.old2
+
+# Text
+UX_UI_FLUJO_CASOS_DE_USO_MEJORAS.md
