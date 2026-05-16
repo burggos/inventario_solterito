@@ -7,21 +7,21 @@
     delete_url   — POST action URL (required)
     message      — optional extra message text
 #}
-<div id="{{ modal_id }}" class="fixed inset-0 bg-black/50 dark:bg-black/70 overflow-y-auto h-full w-full hidden z-50 flex items-start justify-center pt-20">
+<div id="{{ modal_id }}" class="fixed inset-0 bg-black/50 dark:bg-black/70 overflow-y-auto h-full w-full hidden z-50 flex items-start justify-center pt-20" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="{{ modal_id }}-title" aria-describedby="{{ modal_id }}-description" tabindex="-1">
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 max-w-sm w-full mx-4 border border-gray-200 dark:border-gray-700">
         <div class="text-center">
             <div class="w-12 h-12 mx-auto mb-4 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
                 <svg class="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
             </div>
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">¿Eliminar {{ item_name }}?</h3>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
+            <h3 id="{{ modal_id }}-title" class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">¿Eliminar {{ item_name }}?</h3>
+            <p id="{{ modal_id }}-description" class="text-sm text-gray-500 dark:text-gray-400 mb-6">
                 {{ message|default:"Esta acción no se puede deshacer." }}
             </p>
             <form method="post" action="{{ delete_url }}">
                 {% csrf_token %}
                 <div class="flex gap-3 justify-center">
-                    <button type="submit" class="btn-danger">Sí, eliminar</button>
-                    <button type="button" onclick="document.getElementById('{{ modal_id }}').classList.add('hidden')" class="btn-secondary">Cancelar</button>
+                    <button type="submit" data-modal-initial-focus class="btn-danger">Sí, eliminar</button>
+                    <button type="button" data-modal-close class="btn-secondary">Cancelar</button>
                 </div>
             </form>
         </div>

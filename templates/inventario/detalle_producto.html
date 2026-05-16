@@ -55,7 +55,7 @@
                     <a href="{% url 'inventario:crear_movimiento' %}?producto={{ producto.pk }}" class="btn-primary">
                         Registrar movimiento
                     </a>
-                    <button onclick="openDeleteModal()" class="btn-danger">
+                    <button type="button" data-modal-target="#deleteModal" class="btn-danger">
                         Eliminar
                     </button>
                 </div>
@@ -158,40 +158,7 @@
 
 {% if user|has_group:"Administrador" %}
 <!-- Modal de eliminación -->
-<div id="deleteModal" class="modal-overlay hidden">
-    <div class="modal-content text-center">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">¿Eliminar producto?</h3>
-        <div class="mt-2 px-4 py-3">
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-                ¿Estás seguro de que deseas eliminar el producto <strong>"{{ producto.nombre }}"</strong>?<br>
-                Esta acción no se puede deshacer.
-            </p>
-        </div>
-        <div class="flex justify-center space-x-3 mt-4">
-            <form method="post" action="{% url 'inventario:eliminar_producto' producto.pk %}">
-                {% csrf_token %}
-                <button type="submit" class="btn-danger">Sí, eliminar</button>
-            </form>
-            <button type="button" onclick="closeDeleteModal()" class="btn-secondary">Cancelar</button>
-        </div>
-    </div>
-</div>
-
-<script>
-    function openDeleteModal() {
-        document.getElementById('deleteModal').classList.remove('hidden');
-    }
-    
-    function closeDeleteModal() {
-        document.getElementById('deleteModal').classList.add('hidden');
-    }
-    
-    document.getElementById('deleteModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeDeleteModal();
-        }
-    });
-</script>
+{% include 'includes/delete_modal.html' with modal_id='deleteModal' item_name=producto.nombre delete_url=request.path|add:'eliminar/' message='Esta accion no se puede deshacer.' %}
 {% endif %}
 
 {{ tendencia_stock_7|json_script:"trend-7-data" }}
