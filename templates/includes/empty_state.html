@@ -1,11 +1,11 @@
-{#
-  Empty State — shown when a table or list has no data
-  
-  Variables:
-    message  — Text to display (required)
-    colspan  — Number of table columns to span (optional, default 1)
-    icon     — SVG path for icon (optional)
-#}
+{% comment %}
+Empty State — shown when a table or list has no data
+
+Variables:
+    message — Text to display (required)
+    colspan — Number of table columns to span (optional, default 1)
+    icon    — SVG path for icon (optional)
+{% endcomment %}
 {% if colspan %}
 <tr>
     <td colspan="{{ colspan }}" class="px-4 py-8 text-center">

@@ -1,10 +1,10 @@
-{#
-  Form Field — renders a single form field consistently
-  
-  Variables:
-    field     — Django form field (required)
-    colspan   — If "full", spans both columns in a 2-col grid (optional)
-#}
+{% comment %}
+Form Field — renders a single form field consistently
+
+Variables:
+    field   — Django form field (required)
+    colspan — If "full", spans both columns in a 2-col grid (optional)
+{% endcomment %}
 <div class="w-full {% if colspan == 'full' or field.name == 'descripcion' %}md:col-span-2{% endif %}">
     <label for="{{ field.id_for_label }}" class="form-label">
         {{ field.label }}{% if field.field.required %} <span class="text-red-500">*</span>{% endif %}

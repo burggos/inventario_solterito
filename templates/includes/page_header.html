@@ -1,13 +1,13 @@
-{# 
-  Page Header — use at the top of every page
-  
-  Variables:
-    title       — Page heading text (required)
-    subtitle    — Description text below title (optional)
-    action_url  — URL for the primary action button (optional)
-    action_text — Text for the primary action button (optional)
+{% comment %}
+Page Header — use at the top of every page
+
+Variables:
+    title        — Page heading text (required)
+    subtitle     — Description text below title (optional)
+    action_url   — URL for the primary action button (optional)
+    action_text  — Text for the primary action button (optional)
     action_class — CSS class for button, defaults to btn-primary (optional)
-#}
+{% endcomment %}
 <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
     <div>
         <h2 class="page-title">{{ title }}</h2>
