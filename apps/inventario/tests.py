@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from django.contrib.auth import get_user_model
@@ -110,12 +110,29 @@ class MovimientoModelTests(TestCase):
         self.assertEqual(self.prod.stock, 5)
 
 
+@override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage')
 class ProductoViewTests(TestCase):
     def setUp(self):
         User = get_user_model()
         self.user = User.objects.create_user(username="tester", password="pass")
         self.client.login(username="tester", password="pass")
         self.cat = Categoria.objects.create(nombre="Prueba")
+        self.producto_activo = Producto.objects.create(
+            nombre='Activo',
+            categoria=self.cat,
+            precio=10,
+            stock=5,
+            stock_minimo=1,
+            activo=True,
+        )
+        self.producto_inactivo = Producto.objects.create(
+            nombre='Inactivo',
+            categoria=self.cat,
+            precio=15,
+            stock=0,
+            stock_minimo=1,
+            activo=False,
+        )
 
     def test_lista_productos_vista_requiere_login(self):
         self.client.logout()
@@ -134,6 +151,17 @@ class ProductoViewTests(TestCase):
         # debería redirigir al detalle del producto
         self.assertEqual(resp.status_code, 302)
         self.assertTrue(Producto.objects.filter(nombre='Pan').exists())
+
+    def test_lista_productos_muestra_desactivados_cuando_se_filtra(self):
+        response = self.client.get(reverse('inventario:lista_productos'), {'estado': 'desactivados'})
+        productos_renderizados = list(response.context['page_obj'].object_list)
+        self.assertIn(self.producto_inactivo, productos_renderizados)
+        self.assertNotIn(self.producto_activo, productos_renderizados)
+
+    def test_detalle_producto_inactivo_sigue_disponible(self):
+        response = self.client.get(reverse('inventario:detalle_producto', args=[self.producto_inactivo.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Inactivo')
 
 
 class NoError500ViewTests(TestCase):

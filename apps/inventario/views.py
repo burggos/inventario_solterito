@@ -104,7 +104,16 @@ def dashboard(request):
 
 @login_required
 def lista_productos(request):
-    productos = Producto.objects.filter(activo=True).select_related('categoria', 'proveedor')
+    productos = Producto.objects.select_related('categoria', 'proveedor')
+
+    estado = request.GET.get('estado', 'activos')
+    if estado == 'desactivados':
+        productos = productos.filter(activo=False)
+    elif estado == 'todos':
+        pass
+    else:
+        estado = 'activos'
+        productos = productos.filter(activo=True)
     
     # Búsqueda por nombre
     query = request.GET.get('q', '')
@@ -133,6 +142,7 @@ def lista_productos(request):
         'page_obj': page_obj,
         'categorias': categorias,
         'query': query,
+        'estado_seleccionado': estado,
         'categoria_seleccionada': categoria_id,
         'stock_bajo': stock_bajo,
     }
@@ -144,7 +154,6 @@ def detalle_producto(request, pk):
     producto = get_object_or_404(
         Producto.objects.select_related('categoria', 'proveedor'),
         pk=pk,
-        activo=True,
     )
     movimientos = list(producto.movimientos.all().order_by('-fecha')[:12])
 

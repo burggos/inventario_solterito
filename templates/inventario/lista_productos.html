@@ -26,7 +26,7 @@
 
 <!-- Filters -->
 <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 mb-6">
-    <form method="get" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+    <form method="get" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
         <div>
             <label for="q" class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Buscar</label>
             <input type="text" name="q" id="q" value="{{ query }}" placeholder="Nombre o descripción...">
@@ -40,6 +40,14 @@
                 {% endfor %}
             </select>
         </div>
+        <div>
+            <label for="estado" class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Estado catálogo</label>
+            <select name="estado" id="estado">
+                <option value="activos" {% if estado_seleccionado == 'activos' %}selected{% endif %}>Activos</option>
+                <option value="desactivados" {% if estado_seleccionado == 'desactivados' %}selected{% endif %}>Desactivados</option>
+                <option value="todos" {% if estado_seleccionado == 'todos' %}selected{% endif %}>Todos</option>
+            </select>
+        </div>
         <div class="flex items-center pt-5">
             <label class="inline-flex items-center cursor-pointer select-none h-[2.375rem]">
                 <input type="checkbox" name="stock_bajo" value="on" {% if stock_bajo %}checked{% endif %} class="w-5 h-5 text-teal-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-teal-500 focus:ring-2 cursor-pointer">
@@ -49,7 +57,7 @@
         <div>
             <button type="submit" class="btn-primary w-full">Filtrar</button>
         </div>
-        {% if query or categoria_seleccionada or stock_bajo %}
+        {% if query or categoria_seleccionada or stock_bajo or estado_seleccionado != 'activos' %}
         <div>
             <a href="{% url 'inventario:lista_productos' %}" class="btn-outline w-full">Limpiar</a>
         </div>
@@ -97,7 +105,9 @@
                     <td class="py-3 pr-4 font-medium text-gray-800 dark:text-gray-200">COP {{ producto.precio|floatformat:0 }}</td>
                     <td class="py-3 pr-4 font-bold {% if producto.stock == 0 %}text-red-600 dark:text-red-400{% elif producto.stock <= producto.stock_minimo %}text-amber-600 dark:text-amber-400{% else %}text-gray-800 dark:text-gray-200{% endif %}">{{ producto.stock }}</td>
                     <td class="py-3 pr-4">
-                        {% if producto.stock == 0 %}
+                        {% if not producto.activo %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">Desactivado</span>
+                        {% elif producto.stock == 0 %}
                         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">Sin Stock</span>
                         {% elif producto.stock <= producto.stock_minimo %}
                         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">Stock Bajo</span>
@@ -137,17 +147,17 @@
     <div class="mt-6 pt-4 flex justify-center border-t border-gray-200 dark:border-gray-700">
         <nav class="pagination" aria-label="Paginación">
             {% if page_obj.has_previous %}
-            <a href="?{% if query %}q={{ query }}&{% endif %}{% if categoria_seleccionada %}categoria={{ categoria_seleccionada }}&{% endif %}{% if stock_bajo %}stock_bajo=on&{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>
+            <a href="?{% if query %}q={{ query }}&{% endif %}{% if categoria_seleccionada %}categoria={{ categoria_seleccionada }}&{% endif %}{% if estado_seleccionado %}estado={{ estado_seleccionado }}&{% endif %}{% if stock_bajo %}stock_bajo=on&{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>
             {% endif %}
             {% for num in page_obj.paginator.page_range %}
                 {% if page_obj.number == num %}
                     <span class="active">{{ num }}</span>
                 {% elif num > page_obj.number|add:-3 and num < page_obj.number|add:3 %}
-                    <a href="?{% if query %}q={{ query }}&{% endif %}{% if categoria_seleccionada %}categoria={{ categoria_seleccionada }}&{% endif %}{% if stock_bajo %}stock_bajo=on&{% endif %}page={{ num }}">{{ num }}</a>
+                    <a href="?{% if query %}q={{ query }}&{% endif %}{% if categoria_seleccionada %}categoria={{ categoria_seleccionada }}&{% endif %}{% if estado_seleccionado %}estado={{ estado_seleccionado }}&{% endif %}{% if stock_bajo %}stock_bajo=on&{% endif %}page={{ num }}">{{ num }}</a>
                 {% endif %}
             {% endfor %}
             {% if page_obj.has_next %}
-            <a href="?{% if query %}q={{ query }}&{% endif %}{% if categoria_seleccionada %}categoria={{ categoria_seleccionada }}&{% endif %}{% if stock_bajo %}stock_bajo=on&{% endif %}page={{ page_obj.next_page_number }}">Siguiente</a>
+            <a href="?{% if query %}q={{ query }}&{% endif %}{% if categoria_seleccionada %}categoria={{ categoria_seleccionada }}&{% endif %}{% if estado_seleccionado %}estado={{ estado_seleccionado }}&{% endif %}{% if stock_bajo %}stock_bajo=on&{% endif %}page={{ page_obj.next_page_number }}">Siguiente</a>
             {% endif %}
         </nav>
     </div>
