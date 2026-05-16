@@ -46,6 +46,20 @@
 
 		banner.textContent = 'Sin conexion a internet. Algunas operaciones pueden fallar.';
 		banner.classList.remove('hidden');
+		announce('Sin conexion a internet. Algunas operaciones pueden fallar.', 'assertive');
+	}
+
+	function announce(message, politeness) {
+		if (!message) return;
+		var mode = politeness === 'assertive' ? 'assertive' : 'polite';
+		var targetId = mode === 'assertive' ? 'app-live-assertive' : 'app-live-polite';
+		var region = document.getElementById(targetId);
+		if (!region) return;
+
+		region.textContent = '';
+		setTimeout(function () {
+			region.textContent = String(message);
+		}, 20);
 	}
 
 	function initNetworkBanner() {
@@ -85,6 +99,7 @@
 		fetchWithTimeout: fetchWithTimeout,
 		setNetworkBanner: setNetworkBanner,
 		renderTrendBars: renderTrendBars,
+		announce: announce,
 	};
 
 	document.addEventListener('DOMContentLoaded', initNetworkBanner);
