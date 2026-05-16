@@ -196,10 +196,12 @@ def detalle_producto(request, pk):
 
     tendencia_stock_7 = construir_tendencia(7)
     tendencia_stock_30 = construir_tendencia(30)
+    tiene_movimientos = producto.movimientos.exists()
 
     context = {
         'producto': producto,
         'movimientos': movimientos,
+        'tiene_movimientos': tiene_movimientos,
         'tendencia_stock_7': tendencia_stock_7,
         'tendencia_stock_30': tendencia_stock_30,
         'hoy_label': hoy.strftime('%d/%m'),
@@ -306,6 +308,19 @@ def eliminar_producto(request, pk):
         return redirect('inventario:lista_productos')
     
     return render(request, 'inventario/eliminar_producto.html', {'producto': producto})
+
+
+@login_required
+@role_required(ROLE_ADMIN)
+def desactivar_producto(request, pk):
+    producto = get_object_or_404(Producto, pk=pk, activo=True)
+    if request.method == 'POST':
+        producto.activo = False
+        producto.save(update_fields=['activo', 'fecha_actualizacion'])
+        messages.success(request, f'Producto "{producto.nombre}" desactivado correctamente.')
+        return redirect('inventario:lista_productos')
+
+    return redirect('inventario:detalle_producto', pk=producto.pk)
 
 @login_required
 @role_required(ROLE_ADMIN, ROLE_BODEGUERO)

@@ -265,6 +265,13 @@ class NoError500ViewTests(TestCase):
         self.assertNot500(response, reverse('inventario:eliminar_producto', args=[self.producto.pk]))
         self.assertEqual(response.status_code, 302)
 
+    def test_post_desactivar_producto_with_movimientos_marks_inactive(self):
+        response = self.client.post(reverse('inventario:desactivar_producto', args=[self.producto.pk]))
+        self.assertNot500(response, reverse('inventario:desactivar_producto', args=[self.producto.pk]))
+        self.assertEqual(response.status_code, 302)
+        self.producto.refresh_from_db()
+        self.assertFalse(self.producto.activo)
+
     def test_post_crear_movimiento_does_not_return_500(self):
         data = {
             'producto': self.producto.pk,

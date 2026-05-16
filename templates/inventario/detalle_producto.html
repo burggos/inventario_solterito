@@ -55,10 +55,22 @@
                     <a href="{% url 'inventario:crear_movimiento' %}?producto={{ producto.pk }}" class="btn-primary">
                         Registrar movimiento
                     </a>
+                    {% if tiene_movimientos %}
+                    <button type="button" data-modal-target="#deactivateModal" class="btn-secondary">
+                        Desactivar producto
+                    </button>
+                    {% endif %}
+                    {% if not tiene_movimientos %}
                     <button type="button" data-modal-target="#deleteModal" class="btn-danger">
                         Eliminar
                     </button>
+                    {% endif %}
                 </div>
+                {% if tiene_movimientos %}
+                <p class="mt-3 text-xs text-amber-700 dark:text-amber-400">
+                    Este producto tiene movimientos registrados, por eso no puede eliminarse y debe desactivarse.
+                </p>
+                {% endif %}
                 {% endif %}
             </div>
         </div>
@@ -123,8 +135,13 @@
     </div>
 
 {% if user|has_group:"Administrador" %}
+{% if tiene_movimientos %}
+{% include 'includes/delete_modal.html' with modal_id='deactivateModal' delete_url=request.path|add:'desactivar/' title='¿Desactivar producto?' message='El producto dejará de aparecer en el catálogo activo. Sus movimientos históricos se conservarán.' confirm_label='Si, desactivar' confirm_class='btn-secondary' %}
+{% endif %}
+{% if not tiene_movimientos %}
 <!-- Modal de eliminación -->
 {% include 'includes/delete_modal.html' with modal_id='deleteModal' item_name=producto.nombre delete_url=request.path|add:'eliminar/' title='¿Eliminar producto?' message='Esta accion no se puede deshacer.' confirm_label='Si, eliminar' confirm_class='btn-danger' %}
+{% endif %}
 {% endif %}
 
 {{ tendencia_stock_7|json_script:"trend-7-data" }}
