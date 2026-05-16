@@ -25,7 +25,11 @@
     </div>
 
     {% if venta.estado != 'cancelada' %}
+    {% if venta.estado == 'pendiente' %}
+    {% include 'includes/delete_modal.html' with modal_id='cancelVentaModal' delete_url=cancelar_venta_url title='¿Cancelar este pedido por encargo?' message='Se cancelara el pedido pendiente sin mover stock.' confirm_label='Si, cancelar pedido' confirm_class='btn-danger' %}
+    {% else %}
     {% include 'includes/delete_modal.html' with modal_id='cancelVentaModal' delete_url=cancelar_venta_url title='¿Cancelar esta venta?' message='El stock sera revertido automaticamente si confirmas esta accion.' confirm_label='Si, cancelar venta' confirm_class='btn-danger' %}
+    {% endif %}
     {% endif %}
 
     <!-- Encabezado -->
@@ -60,6 +64,13 @@
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
         <h2 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Notas</h2>
         <p class="text-gray-700 dark:text-gray-300">{{ venta.notas }}</p>
+    </div>
+    {% endif %}
+
+    {% if venta.estado == 'pendiente' %}
+    <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 mb-6">
+        <p class="text-sm font-semibold text-amber-800 dark:text-amber-200">Pedido por encargo pendiente</p>
+        <p class="text-xs text-amber-700 dark:text-amber-300 mt-1">Esta venta fue registrada como encargo. Aun no se desconto inventario y queda pendiente de abastecimiento o entrega.</p>
     </div>
     {% endif %}
 

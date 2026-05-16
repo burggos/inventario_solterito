@@ -188,7 +188,11 @@
                             {% endif %}
                         </td>
                         <td class="py-3">
-                            <a href="{% url 'inventario:crear_movimiento' %}?producto={{ producto.pk }}" class="text-xs font-medium text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-300 transition">+ Entrada</a>
+                            {% if request.user|has_any_group:"Administrador,Bodeguero" %}
+                            <a href="{% url 'inventario:compra_rapida' %}?producto={{ producto.pk }}" class="text-xs font-medium text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-300 transition">Nueva compra</a>
+                            {% else %}
+                            <a href="{% url 'inventario:detalle_producto' producto.pk %}" class="text-xs font-medium text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-300 transition">Ver detalle</a>
+                            {% endif %}
                         </td>
                     </tr>
                     {% empty %}

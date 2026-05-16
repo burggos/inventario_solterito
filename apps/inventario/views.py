@@ -1021,22 +1021,101 @@ def recibir_compra(request, pk):
         messages.error(request, 'Esta orden ya fue completada o cancelada.')
         return redirect('inventario:detalle_compra', pk=orden.pk)
 
-    for detalle in orden.detalles.all():
-        detalle.cantidad_recibida = detalle.cantidad_solicitada
-        detalle.save()
-        # Crear movimiento de entrada (el modelo Movimiento actualiza stock)
-        Movimiento.objects.create(
-            producto=detalle.producto,
-            tipo='entrada',
-            cantidad=detalle.cantidad_recibida,
-            descripcion=f'Recepción de compra {orden.numero}',
-            usuario=request.user.username,
-        )
+    detalles = list(orden.detalles.all().select_related('producto'))
+    if not detalles:
+        messages.error(request, 'La orden no tiene ítems para recibir.')
+        return redirect('inventario:detalle_compra', pk=orden.pk)
 
-    orden.estado = 'completada'
+    valores_recibidos = {}
+    for detalle in detalles:
+        if detalle.cantidad_recibida >= detalle.cantidad_solicitada:
+            field_name = f'recibido_{detalle.pk}'
+            raw_value = request.POST.get(field_name)
+            if raw_value is not None:
+                try:
+                    cantidad_intentada = int(raw_value)
+                except (TypeError, ValueError):
+                    messages.error(request, f'Cantidad inválida para {detalle.producto.nombre}.')
+                    return redirect('inventario:detalle_compra', pk=orden.pk)
+
+                if cantidad_intentada != detalle.cantidad_recibida:
+                    messages.error(
+                        request,
+                        f'{detalle.producto.nombre} ya está completamente recibido y no puede editarse de nuevo.',
+                    )
+                    return redirect('inventario:detalle_compra', pk=orden.pk)
+
+            valores_recibidos[detalle.pk] = detalle.cantidad_recibida
+            continue
+
+        field_name = f'recibido_{detalle.pk}'
+        raw_value = request.POST.get(field_name, str(detalle.cantidad_recibida))
+        try:
+            cantidad_recibida = int(raw_value)
+        except (TypeError, ValueError):
+            messages.error(request, f'Cantidad inválida para {detalle.producto.nombre}.')
+            return redirect('inventario:detalle_compra', pk=orden.pk)
+
+        if cantidad_recibida < detalle.cantidad_recibida:
+            messages.error(
+                request,
+                f'No puedes reducir lo ya recibido de {detalle.producto.nombre} (actual: {detalle.cantidad_recibida}).',
+            )
+            return redirect('inventario:detalle_compra', pk=orden.pk)
+
+        if cantidad_recibida > detalle.cantidad_solicitada:
+            messages.error(
+                request,
+                f'La cantidad recibida de {detalle.producto.nombre} no puede superar la solicitada ({detalle.cantidad_solicitada}).',
+            )
+            return redirect('inventario:detalle_compra', pk=orden.pk)
+
+        valores_recibidos[detalle.pk] = cantidad_recibida
+
+    hubo_movimientos = False
+    for detalle in detalles:
+        nuevo_recibido = valores_recibidos[detalle.pk]
+        adicional = nuevo_recibido - detalle.cantidad_recibida
+        if adicional > 0:
+            Movimiento.objects.create(
+                producto=detalle.producto,
+                tipo='entrada',
+                cantidad=adicional,
+                descripcion=f'Recepción de compra {orden.numero}',
+                usuario=request.user.username,
+            )
+            detalle.cantidad_recibida = nuevo_recibido
+            detalle.save(update_fields=['cantidad_recibida'])
+            hubo_movimientos = True
+
+    detalles_actualizados = list(orden.detalles.all())
+    total_solicitado = sum(d.cantidad_solicitada for d in detalles_actualizados)
+    total_recibido = sum(d.cantidad_recibida for d in detalles_actualizados)
+
+    if total_recibido == 0:
+        orden.estado = 'pendiente'
+        orden.fecha_entrega_real = None
+        orden.save(update_fields=['estado', 'fecha_entrega_real'])
+        messages.info(request, f'Compra {orden.numero} sigue pendiente. Aún no registras recepción.')
+        return redirect('inventario:detalle_compra', pk=orden.pk)
+
+    if total_recibido == total_solicitado:
+        orden.estado = 'completada'
+        orden.fecha_entrega_real = timezone.now().date()
+        orden.save(update_fields=['estado', 'fecha_entrega_real'])
+        if hubo_movimientos:
+            messages.success(request, f'Compra {orden.numero} recibida completamente. Stock actualizado.')
+        else:
+            messages.info(request, f'Compra {orden.numero} ya estaba completamente recibida.')
+        return redirect('inventario:detalle_compra', pk=orden.pk)
+
+    orden.estado = 'recibida_parcial'
     orden.fecha_entrega_real = timezone.now().date()
-    orden.save()
-    messages.success(request, f'Compra {orden.numero} recibida. Stock actualizado.')
+    orden.save(update_fields=['estado', 'fecha_entrega_real'])
+    if hubo_movimientos:
+        messages.success(request, f'Compra {orden.numero} actualizada con recepción parcial.')
+    else:
+        messages.info(request, f'Compra {orden.numero} sigue con recepción parcial sin cambios.')
     return redirect('inventario:detalle_compra', pk=orden.pk)
 
 
@@ -1116,19 +1195,25 @@ def cancelar_venta(request, pk):
         messages.error(request, 'Esta venta ya está cancelada.')
         return redirect('inventario:detalle_venta', pk=venta.pk)
 
-    # Revertir stock vía movimiento (el modelo Movimiento actualiza stock)
-    for detalle in venta.detalles.all():
-        Movimiento.objects.create(
-            producto=detalle.producto,
-            tipo='entrada',
-            cantidad=detalle.cantidad,
-            descripcion=f'Cancelación de venta {venta.numero}',
-            usuario=request.user.username,
-        )
+    revertio_stock = False
+    if venta.estado == 'completada':
+        # Revertir stock solo si la venta ya habia descontado inventario.
+        for detalle in venta.detalles.all():
+            Movimiento.objects.create(
+                producto=detalle.producto,
+                tipo='entrada',
+                cantidad=detalle.cantidad,
+                descripcion=f'Cancelación de venta {venta.numero}',
+                usuario=request.user.username,
+            )
+        revertio_stock = True
 
     venta.estado = 'cancelada'
     venta.save()
-    messages.success(request, f'Venta {venta.numero} cancelada. Stock revertido.')
+    if revertio_stock:
+        messages.success(request, f'Venta {venta.numero} cancelada. Stock revertido.')
+    else:
+        messages.success(request, f'Pedido por encargo {venta.numero} cancelado.')
     return redirect('inventario:detalle_venta', pk=venta.pk)
 
 
@@ -1307,8 +1392,27 @@ def venta_rapida(request):
 def compra_rapida(request):
     """Renders the fast purchase interface."""
     proveedores = Proveedor.objects.filter(activo=True).order_by('nombre')
+    producto_inicial = None
+    producto_inicial_id = request.GET.get('producto')
+    if producto_inicial_id and producto_inicial_id.isdigit():
+        producto = Producto.objects.select_related('proveedor').filter(
+            pk=int(producto_inicial_id),
+            activo=True,
+        ).first()
+        if producto:
+            producto_inicial = {
+                'id': producto.id,
+                'nombre': producto.nombre,
+                'precio': str(producto.precio),
+                'stock': producto.stock,
+                'codigo_barras': producto.codigo_barras or '',
+                'proveedor_id': producto.proveedor_id or '',
+                'proveedor_nombre': producto.proveedor.nombre if producto.proveedor_id else '',
+            }
+
     return render(request, 'inventario/compra_rapida.html', {
         'proveedores': proveedores,
+        'producto_inicial': producto_inicial,
     })
 
 
@@ -1339,6 +1443,7 @@ def api_pos_venta(request):
     descuento_manual_raw = data.get('descuento_manual_porcentaje', 0)
     forma_pago = data.get('forma_pago', 'efectivo')
     notas = data.get('notas', '')
+    registrar_como_pendiente = bool(data.get('registrar_como_pendiente'))
 
     try:
         descuento_manual_porcentaje = Decimal(str(descuento_manual_raw or 0))
@@ -1368,7 +1473,7 @@ def api_pos_venta(request):
                         'ok': False,
                         'error': f'Cantidad inválida para {producto.nombre}'
                     }, status=400)
-                if producto.stock < cantidad:
+                if not registrar_como_pendiente and producto.stock < cantidad:
                     return JsonResponse({
                         'ok': False,
                         'error': f'Stock insuficiente para {producto.nombre} (disponible: {producto.stock})'
@@ -1399,7 +1504,7 @@ def api_pos_venta(request):
                 cliente_nombre=cliente,
                 forma_pago=forma_pago,
                 notas=notas,
-                estado='completada',
+                estado='pendiente' if registrar_como_pendiente else 'completada',
                 usuario_vendedor=request.user.username,
             )
             venta.save()
@@ -1415,14 +1520,15 @@ def api_pos_venta(request):
                 )
                 detalle.save()
                 subtotal += detalle.subtotal
-                # Movimiento actualiza stock en guardado atómico
-                Movimiento.objects.create(
-                    producto=vi['producto'],
-                    tipo='salida',
-                    cantidad=vi['cantidad'],
-                    descripcion=f'Venta POS {venta.numero}',
-                    usuario=request.user.username,
-                )
+                if not registrar_como_pendiente:
+                    # Movimiento actualiza stock en guardado atómico
+                    Movimiento.objects.create(
+                        producto=vi['producto'],
+                        tipo='salida',
+                        cantidad=vi['cantidad'],
+                        descripcion=f'Venta POS {venta.numero}',
+                        usuario=request.user.username,
+                    )
 
             descuento_total = (subtotal * descuento_porcentaje) / Decimal('100')
             total = subtotal - descuento_total
@@ -1463,6 +1569,7 @@ def api_pos_venta(request):
             'ok': True,
             'venta_id': venta.pk,
             'numero': venta.numero,
+            'estado': venta.estado,
             'subtotal': str(venta.subtotal),
             'descuento_total': str(venta.descuento_total),
             'total': str(venta.total),
@@ -1507,6 +1614,7 @@ def api_pos_compra(request):
         return JsonResponse({'ok': False, 'error': 'Selecciona un proveedor'}, status=400)
 
     notas = data.get('notas', '')
+    registrar_como_pendiente = bool(data.get('registrar_como_pendiente'))
 
     try:
         with transaction.atomic():
@@ -1536,10 +1644,10 @@ def api_pos_compra(request):
             # Create purchase order
             orden = OrdenCompra(
                 proveedor=proveedor,
-                estado='completada',
+                estado='pendiente' if registrar_como_pendiente else 'completada',
                 notas=notas,
                 usuario_creador=request.user.username,
-                fecha_entrega_real=timezone.now().date(),
+                fecha_entrega_real=None if registrar_como_pendiente else timezone.now().date(),
             )
             orden.save()
 
@@ -1549,19 +1657,20 @@ def api_pos_compra(request):
                     orden_compra=orden,
                     producto=vi['producto'],
                     cantidad_solicitada=vi['cantidad'],
-                    cantidad_recibida=vi['cantidad'],
+                    cantidad_recibida=0 if registrar_como_pendiente else vi['cantidad'],
                     precio_unitario=vi['precio'],
                 )
                 detalle.save()
                 total += detalle.subtotal
-                # Movimiento actualiza stock en guardado atómico
-                Movimiento.objects.create(
-                    producto=vi['producto'],
-                    tipo='entrada',
-                    cantidad=vi['cantidad'],
-                    descripcion=f'Compra rápida {orden.numero}',
-                    usuario=request.user.username,
-                )
+                if not registrar_como_pendiente:
+                    # Movimiento actualiza stock en guardado atómico
+                    Movimiento.objects.create(
+                        producto=vi['producto'],
+                        tipo='entrada',
+                        cantidad=vi['cantidad'],
+                        descripcion=f'Compra rápida {orden.numero}',
+                        usuario=request.user.username,
+                    )
 
             orden.total = total
             orden.save(update_fields=['total'])
@@ -1581,6 +1690,7 @@ def api_pos_compra(request):
             'ok': True,
             'orden_id': orden.pk,
             'numero': orden.numero,
+            'estado': orden.estado,
             'total': str(orden.total),
         })
 

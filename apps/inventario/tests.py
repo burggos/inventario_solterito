@@ -10,7 +10,7 @@ from django.core.exceptions import ValidationError
 # Import using the app name rather than the package path to avoid
 # "model not in INSTALLED_APPS" errors when the package sits under
 # an extra "apps" directory.
-from inventario.models import Producto, Categoria, Movimiento
+from inventario.models import Producto, Categoria, Movimiento, Venta, DetalleVenta, Proveedor, OrdenCompra, DetalleCompra
 
 
 class ProductoModelTests(TestCase):
@@ -163,7 +163,28 @@ class ProductoViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Inactivo')
 
+    def test_compra_rapida_admite_producto_inicial_por_querystring(self):
+        response = self.client.get(reverse('inventario:compra_rapida'), {'producto': self.producto_activo.pk})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['producto_inicial']['id'], self.producto_activo.pk)
+        self.assertContains(response, 'compra-producto-inicial-data')
 
+    def test_dashboard_linkea_stock_critico_a_compra_rapida(self):
+        producto_critico = Producto.objects.create(
+            nombre='Critico',
+            categoria=self.cat,
+            precio=9,
+            stock=1,
+            stock_minimo=3,
+            activo=True,
+        )
+
+        response = self.client.get(reverse('inventario:dashboard'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse('inventario:compra_rapida') + f'?producto={producto_critico.pk}')
+
+
+@override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage')
 class NoError500ViewTests(TestCase):
     def setUp(self):
         User = get_user_model()
@@ -313,3 +334,276 @@ class NoError500ViewTests(TestCase):
     def test_post_eliminar_producto_does_not_return_500(self):
         response = self.client.post(reverse('inventario:eliminar_producto', args=[self.producto_sin_mov.pk]))
         self.assertNot500(response, reverse('inventario:eliminar_producto', args=[self.producto_sin_mov.pk]))
+
+
+class PosVentaPendienteTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.user = User.objects.create_user(username='vendedor', password='pass')
+        self.client.login(username='vendedor', password='pass')
+        self.cat = Categoria.objects.create(nombre='Abarrotes')
+        self.producto = Producto.objects.create(
+            nombre='Arroz',
+            categoria=self.cat,
+            precio=5000,
+            stock=1,
+            stock_minimo=2,
+            activo=True,
+        )
+
+    def test_api_pos_venta_crea_pedido_pendiente_sin_descontar_stock(self):
+        response = self.client.post(
+            reverse('inventario:api_pos_venta'),
+            data={
+                'items': [
+                    {
+                        'producto_id': self.producto.pk,
+                        'cantidad': 3,
+                        'precio': '5000',
+                    }
+                ],
+                'cliente': 'Cliente Encargo',
+                'forma_pago': 'efectivo',
+                'registrar_como_pendiente': True,
+            },
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload['ok'])
+        self.assertEqual(payload['estado'], 'pendiente')
+
+        venta = Venta.objects.get(pk=payload['venta_id'])
+        self.assertEqual(venta.estado, 'pendiente')
+        self.assertEqual(venta.detalles.count(), 1)
+
+        self.producto.refresh_from_db()
+        self.assertEqual(self.producto.stock, 1)
+        self.assertFalse(Movimiento.objects.filter(descripcion__icontains=venta.numero, tipo='salida').exists())
+
+    def test_cancelar_venta_pendiente_no_incrementa_stock(self):
+        venta = Venta.objects.create(
+            cliente_nombre='Cliente Encargo',
+            forma_pago='efectivo',
+            estado='pendiente',
+            subtotal=5000,
+            total=5000,
+            usuario_vendedor=self.user.username,
+        )
+        DetalleVenta.objects.create(
+            venta=venta,
+            producto=self.producto,
+            cantidad=2,
+            precio_unitario=5000,
+        )
+
+        stock_antes = self.producto.stock
+        response = self.client.post(reverse('inventario:cancelar_venta', args=[venta.pk]))
+
+        self.assertEqual(response.status_code, 302)
+        venta.refresh_from_db()
+        self.assertEqual(venta.estado, 'cancelada')
+        self.producto.refresh_from_db()
+        self.assertEqual(self.producto.stock, stock_antes)
+
+
+class PosCompraTipoTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.user = User.objects.create_user(username='bodega', password='pass')
+        self.client.login(username='bodega', password='pass')
+        self.cat = Categoria.objects.create(nombre='Lacteos')
+        self.proveedor = Proveedor.objects.create(nombre='Proveedor Prueba', activo=True)
+        self.producto = Producto.objects.create(
+            nombre='Leche',
+            categoria=self.cat,
+            proveedor=self.proveedor,
+            precio=4200,
+            stock=3,
+            stock_minimo=1,
+            activo=True,
+        )
+
+    def test_api_pos_compra_directa_actualiza_stock_y_completa_orden(self):
+        response = self.client.post(
+            reverse('inventario:api_pos_compra'),
+            data={
+                'items': [
+                    {
+                        'producto_id': self.producto.pk,
+                        'cantidad': 2,
+                        'precio': '4000',
+                    }
+                ],
+                'proveedor_id': self.proveedor.pk,
+                'notas': 'Compra directa',
+            },
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload['ok'])
+        self.assertEqual(payload['estado'], 'completada')
+
+        orden = OrdenCompra.objects.get(pk=payload['orden_id'])
+        self.assertEqual(orden.estado, 'completada')
+        self.assertIsNotNone(orden.fecha_entrega_real)
+        detalle = orden.detalles.get(producto=self.producto)
+        self.assertEqual(detalle.cantidad_recibida, 2)
+
+        self.producto.refresh_from_db()
+        self.assertEqual(self.producto.stock, 5)
+
+    def test_api_pos_compra_por_encargo_crea_orden_pendiente_sin_stock(self):
+        stock_antes = self.producto.stock
+        response = self.client.post(
+            reverse('inventario:api_pos_compra'),
+            data={
+                'items': [
+                    {
+                        'producto_id': self.producto.pk,
+                        'cantidad': 4,
+                        'precio': '4100',
+                    }
+                ],
+                'proveedor_id': self.proveedor.pk,
+                'registrar_como_pendiente': True,
+                'notas': 'Encargo al proveedor',
+            },
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload['ok'])
+        self.assertEqual(payload['estado'], 'pendiente')
+
+        orden = OrdenCompra.objects.get(pk=payload['orden_id'])
+        self.assertEqual(orden.estado, 'pendiente')
+        self.assertIsNone(orden.fecha_entrega_real)
+        detalle = orden.detalles.get(producto=self.producto)
+        self.assertEqual(detalle.cantidad_solicitada, 4)
+        self.assertEqual(detalle.cantidad_recibida, 0)
+
+        self.producto.refresh_from_db()
+        self.assertEqual(self.producto.stock, stock_antes)
+        self.assertFalse(Movimiento.objects.filter(descripcion__icontains=orden.numero, tipo='entrada').exists())
+
+
+@override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage')
+class RecepcionCompraParcialTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.user = User.objects.create_user(username='bodega2', password='pass')
+        self.client.login(username='bodega2', password='pass')
+
+        self.cat = Categoria.objects.create(nombre='Enlatados')
+        self.proveedor = Proveedor.objects.create(nombre='Proveedor Recepcion', activo=True)
+        self.producto = Producto.objects.create(
+            nombre='Atun',
+            categoria=self.cat,
+            proveedor=self.proveedor,
+            precio=7000,
+            stock=5,
+            stock_minimo=1,
+            activo=True,
+        )
+        self.orden = OrdenCompra.objects.create(
+            proveedor=self.proveedor,
+            estado='pendiente',
+            usuario_creador=self.user.username,
+        )
+        self.detalle = DetalleCompra.objects.create(
+            orden_compra=self.orden,
+            producto=self.producto,
+            cantidad_solicitada=10,
+            cantidad_recibida=0,
+            precio_unitario=6500,
+        )
+
+    def test_recibir_compra_permite_recepcion_parcial_por_cantidad_real(self):
+        response = self.client.post(
+            reverse('inventario:recibir_compra', args=[self.orden.pk]),
+            data={f'recibido_{self.detalle.pk}': '4'},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.orden.refresh_from_db()
+        self.detalle.refresh_from_db()
+        self.producto.refresh_from_db()
+
+        self.assertEqual(self.orden.estado, 'recibida_parcial')
+        self.assertEqual(self.detalle.cantidad_recibida, 4)
+        self.assertEqual(self.producto.stock, 9)
+
+    def test_recibir_compra_completa_despues_de_parcial_solo_suma_delta(self):
+        self.client.post(
+            reverse('inventario:recibir_compra', args=[self.orden.pk]),
+            data={f'recibido_{self.detalle.pk}': '4'},
+        )
+
+        response = self.client.post(
+            reverse('inventario:recibir_compra', args=[self.orden.pk]),
+            data={f'recibido_{self.detalle.pk}': '10'},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.orden.refresh_from_db()
+        self.detalle.refresh_from_db()
+        self.producto.refresh_from_db()
+
+        self.assertEqual(self.orden.estado, 'completada')
+        self.assertEqual(self.detalle.cantidad_recibida, 10)
+        self.assertEqual(self.producto.stock, 15)
+
+    def test_no_permite_editar_item_ya_completo_en_orden_parcial(self):
+        producto_extra = Producto.objects.create(
+            nombre='Sardinas',
+            categoria=self.cat,
+            proveedor=self.proveedor,
+            precio=5500,
+            stock=2,
+            stock_minimo=1,
+            activo=True,
+        )
+        detalle_extra = DetalleCompra.objects.create(
+            orden_compra=self.orden,
+            producto=producto_extra,
+            cantidad_solicitada=6,
+            cantidad_recibida=0,
+            precio_unitario=5000,
+        )
+
+        self.client.post(
+            reverse('inventario:recibir_compra', args=[self.orden.pk]),
+            data={
+                f'recibido_{self.detalle.pk}': '10',
+                f'recibido_{detalle_extra.pk}': '2',
+            },
+        )
+
+        self.orden.refresh_from_db()
+        self.detalle.refresh_from_db()
+        detalle_extra.refresh_from_db()
+        self.producto.refresh_from_db()
+        self.assertEqual(self.orden.estado, 'recibida_parcial')
+        self.assertEqual(self.detalle.cantidad_recibida, 10)
+
+        stock_antes = self.producto.stock
+        response = self.client.post(
+            reverse('inventario:recibir_compra', args=[self.orden.pk]),
+            data={
+                f'recibido_{self.detalle.pk}': '9',
+                f'recibido_{detalle_extra.pk}': '4',
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'no puede editarse de nuevo')
+        self.detalle.refresh_from_db()
+        self.producto.refresh_from_db()
+        self.assertEqual(self.detalle.cantidad_recibida, 10)
+        self.assertEqual(self.producto.stock, stock_antes)

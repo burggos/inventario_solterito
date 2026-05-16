@@ -17,6 +17,13 @@
             {% endfor %}
         </select>
     </div>
+    <label class="flex items-start gap-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-900/20 px-3 py-3 cursor-pointer">
+        <input type="checkbox" id="compra-pendiente-toggle" class="mt-0.5 h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500">
+        <span>
+            <span class="block text-sm font-semibold text-amber-800 dark:text-amber-200">Registrar como compra por encargo</span>
+            <span class="block text-xs text-amber-700/90 dark:text-amber-300/90 mt-1">Deja la orden pendiente y no actualiza stock todavia. Usa esta opcion cuando el proveedor aun no entrega la mercancia.</span>
+        </span>
+    </label>
     <div>
         <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Notas <span class="font-normal">(opcional)</span></label>
         <textarea id="compra-notas" rows="2"
@@ -112,10 +119,14 @@
     .dark .search-result.highlighted { background: rgba(96,165,250,0.1); }
 </style>
 
+{{ producto_inicial|json_script:"compra-producto-inicial-data" }}
+
 <script>
 const COMPRA = {
     cart: [],
     priceReferences: {},
+    isPendingPurchase: false,
+    pendingInitialProduct: null,
     searchTimeout: null,
     selectedIdx: -1,
     csrfToken: document.querySelector('[name=csrfmiddlewaretoken]').value,
@@ -125,6 +136,7 @@ const COMPRA = {
     init() {
         this.loadState();
         this.bindEvents();
+        this.applyInitialProduct();
         const selectedProvider = document.getElementById('proveedor-select').value;
         if (selectedProvider) this.onProveedorChange(selectedProvider);
         this.updateUI();
@@ -140,6 +152,7 @@ const COMPRA = {
         document.getElementById('btn-confirmar').addEventListener('click', () => this.submit());
         document.getElementById('btn-limpiar').addEventListener('click', () => this.clear());
         document.getElementById('proveedor-select').addEventListener('change', e => this.onProveedorChange(e.target.value));
+        document.getElementById('compra-pendiente-toggle').addEventListener('change', e => this.onPendingToggle(e.target.checked));
         document.getElementById('compra-notas').addEventListener('input', () => this.saveState());
         document.addEventListener('keydown', e => this.onGlobalKey(e));
         cartBody.addEventListener('click', e => {
@@ -175,6 +188,7 @@ const COMPRA = {
             const payload = {
                 savedAt: Date.now(),
                 proveedorId: document.getElementById('proveedor-select').value || '',
+                isPendingPurchase: this.isPendingPurchase,
                 notas: document.getElementById('compra-notas').value || '',
                 cart: this.cart,
             };
@@ -192,7 +206,9 @@ const COMPRA = {
                 return;
             }
             this.cart = Array.isArray(data.cart) ? data.cart : [];
+            this.isPendingPurchase = Boolean(data.isPendingPurchase);
             document.getElementById('proveedor-select').value = data.proveedorId || '';
+            document.getElementById('compra-pendiente-toggle').checked = this.isPendingPurchase;
             document.getElementById('compra-notas').value = data.notas || '';
             if (this.cart.length) showToast('Carrito de compra recuperado', 'info');
         } catch (e) {
@@ -202,6 +218,90 @@ const COMPRA = {
 
     clearState() {
         localStorage.removeItem(this.storageKey);
+    },
+
+    onPendingToggle(isPending) {
+        this.isPendingPurchase = Boolean(isPending);
+        this.saveState();
+        this.updateUI();
+    },
+
+    applyInitialProduct() {
+        const initialProductNode = document.getElementById('compra-producto-inicial-data');
+        if (!initialProductNode) return;
+
+        let product;
+        try {
+            product = JSON.parse(initialProductNode.textContent);
+        } catch (e) {
+            return;
+        }
+
+        if (!product || !product.id) return;
+
+        this.clearInitialProductFromUrl();
+        this.pendingInitialProduct = product;
+
+        const providerSelect = document.getElementById('proveedor-select');
+        const currentProviderId = providerSelect.value;
+        const initialProviderId = String(product.proveedor_id || '');
+
+        if (currentProviderId && initialProviderId && currentProviderId !== initialProviderId && this.cart.length) {
+            showToast(`Ya tienes una compra en curso con otro proveedor. Limpia el carrito para cargar ${product.nombre}.`, 'warning');
+            return;
+        }
+
+        if (initialProviderId) {
+            providerSelect.value = initialProviderId;
+            this.onProveedorChange(initialProviderId);
+            return;
+        }
+
+        showToast(`Selecciona un proveedor para continuar con la compra de ${product.nombre}.`, 'info');
+        providerSelect.focus();
+    },
+
+    clearInitialProductFromUrl() {
+        if (!window.history || !window.history.replaceState) return;
+
+        const url = new URL(window.location.href);
+        if (!url.searchParams.has('producto')) return;
+
+        url.searchParams.delete('producto');
+        const nextUrl = `${url.pathname}${url.searchParams.toString() ? `?${url.searchParams.toString()}` : ''}${url.hash}`;
+        window.history.replaceState({}, '', nextUrl);
+    },
+
+    addProduct(product) {
+        const id = parseInt(product.id, 10);
+        const nombre = product.nombre;
+        const precio = parseFloat(product.precio);
+        const stock = parseInt(product.stock, 10);
+
+        const existing = this.cart.find(i => i.id === id);
+        if (existing) {
+            existing.qty++;
+        } else {
+            this.cart.push({ id, nombre, precio, qty: 1, stock });
+            this.hydratePriceReference({ id, precio });
+        }
+
+        this.saveState();
+        this.updateUI();
+        return { ok: true, code: existing ? 'incremented' : 'added' };
+    },
+
+    consumePendingInitialProduct() {
+        if (!this.pendingInitialProduct) return;
+
+        const product = this.pendingInitialProduct;
+        this.pendingInitialProduct = null;
+        this.addProduct(product);
+
+        const search = document.getElementById('product-search');
+        search.value = '';
+        search.focus();
+        showToast(`${product.nombre} listo para comprar`, 'info');
     },
 
     async hydratePriceReference(item) {
@@ -253,6 +353,9 @@ const COMPRA = {
             search.focus();
             if (search.value.length >= 2) this.onSearch(search.value);
             else this.loadProveedorProducts(proveedorId);
+            if (this.pendingInitialProduct) {
+                this.consumePendingInitialProduct();
+            }
         } else {
             search.disabled = true;
             search.placeholder = 'Selecciona un proveedor primero...';
@@ -364,25 +467,17 @@ const COMPRA = {
     },
 
     addFromResult(el) {
-        const id = parseInt(el.dataset.id);
+        const id = parseInt(el.dataset.id, 10);
         const nombre = el.dataset.nombre;
         const precio = parseFloat(el.dataset.precio);
-        const stock = parseInt(el.dataset.stock);
-
-        const existing = this.cart.find(i => i.id === id);
-        if (existing) existing.qty++;
-        else {
-            this.cart.push({ id, nombre, precio, qty: 1, stock });
-            this.hydratePriceReference({ id, precio });
-        }
+        const stock = parseInt(el.dataset.stock, 10);
+        this.addProduct({ id, nombre, precio, stock });
 
         const search = document.getElementById('product-search');
         search.value = '';
         const proveedorId = document.getElementById('proveedor-select').value;
         if (proveedorId) this.loadProveedorProducts(proveedorId);
-        this.saveState();
         search.focus();
-        this.updateUI();
     },
 
     updateQty(id, val) {
@@ -411,7 +506,6 @@ const COMPRA = {
         delete this.priceReferences[id];
         this.saveState();
         this.updateUI();
-        document.getElementById('product-search').focus();
     },
 
     getTotal() { return this.cart.reduce((s, i) => s + i.precio * i.qty, 0); },
@@ -460,6 +554,9 @@ const COMPRA = {
         document.getElementById('summary-subtotal').textContent = `COP ${this.fmt(total)}`;
         document.getElementById('summary-total').textContent = `COP ${this.fmt(total)}`;
         document.getElementById('btn-confirmar').disabled = !this.cart.length || !provSelected;
+        document.getElementById('btn-confirmar').textContent = this.isPendingPurchase
+            ? 'Registrar Encargo (F9)'
+            : 'Confirmar Compra (F9)';
         this.saveState();
     },
 
@@ -483,12 +580,14 @@ const COMPRA = {
                 body: JSON.stringify({
                     items: this.cart.map(i => ({ producto_id: i.id, cantidad: i.qty, precio: i.precio })),
                     proveedor_id: parseInt(provId),
+                    registrar_como_pendiente: this.isPendingPurchase,
                     notas: document.getElementById('compra-notas').value,
                 }),
             }, 15000);
             const data = await res.json();
             if (data.ok) {
-                showToast(`✓ Compra ${data.numero} — COP ${this.fmt(parseFloat(data.total))}`, 'success');
+                const label = data.estado === 'pendiente' ? 'Encargo' : 'Compra';
+                showToast(`✓ ${label} ${data.numero} — COP ${this.fmt(parseFloat(data.total))}`, 'success');
                 this.clear();
             } else {
                 showToast(data.error || 'Error', 'error');
@@ -501,7 +600,7 @@ const COMPRA = {
             if (window.AppUX?.endButtonLoading && state) {
                 window.AppUX.endButtonLoading(btn, state, !this.cart.length || !provSelected);
             } else {
-                btn.textContent = 'Confirmar Compra (F9)';
+                btn.textContent = this.isPendingPurchase ? 'Registrar Encargo (F9)' : 'Confirmar Compra (F9)';
                 btn.disabled = !this.cart.length || !provSelected;
             }
         }
@@ -510,7 +609,9 @@ const COMPRA = {
     clear() {
         this.cart = [];
         this.priceReferences = {};
+        this.isPendingPurchase = false;
         document.getElementById('proveedor-select').value = '';
+        document.getElementById('compra-pendiente-toggle').checked = false;
         document.getElementById('compra-notas').value = '';
         this.clearState();
         this.onProveedorChange('');

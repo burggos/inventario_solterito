@@ -101,6 +101,13 @@
                     class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 dark:bg-gray-700 dark:text-white transition"
                     placeholder="Observaciones..."></textarea>
             </div>
+            <label class="flex items-start gap-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-900/20 px-3 py-3 cursor-pointer">
+                <input type="checkbox" id="pedido-encargo-toggle" class="mt-0.5 h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500">
+                <span>
+                    <span class="block text-sm font-semibold text-amber-800 dark:text-amber-200">Registrar como pedido por encargo</span>
+                    <span class="block text-xs text-amber-700/90 dark:text-amber-300/90 mt-1">Guarda la venta como pendiente y no descuenta stock todavia. Usalo cuando el cliente encargue productos que aun no tienes disponibles.</span>
+                </span>
+            </label>
         </div>
 
         <!-- Summary -->
@@ -167,6 +174,7 @@
 <script>
 const POS = {
     cart: [],
+    isPendingOrder: false,
     selectedPayment: 'efectivo',
     selectedClienteId: null,
     descuentoClientePorcentaje: 0,
@@ -192,6 +200,7 @@ const POS = {
             const payload = {
                 savedAt: Date.now(),
                 cart: this.cart,
+                isPendingOrder: this.isPendingOrder,
                 selectedPayment: this.selectedPayment,
                 selectedClienteId: this.selectedClienteId,
                 descuentoManualPorcentaje: this.descuentoManualPorcentaje,
@@ -215,10 +224,12 @@ const POS = {
             }
 
             this.cart = Array.isArray(data.cart) ? data.cart : [];
+            this.isPendingOrder = Boolean(data.isPendingOrder);
             this.selectedPayment = data.selectedPayment || 'efectivo';
             this.selectedClienteId = data.selectedClienteId || null;
             this.descuentoManualPorcentaje = parseFloat(data.descuentoManualPorcentaje || 0);
 
+            document.getElementById('pedido-encargo-toggle').checked = this.isPendingOrder;
             document.getElementById('cliente-select').value = this.selectedClienteId || '';
             document.getElementById('descuento-manual').value = this.descuentoManualPorcentaje;
             document.getElementById('cliente-nombre').value = data.clienteNombre || 'Cliente General';
@@ -254,6 +265,7 @@ const POS = {
         document.getElementById('btn-limpiar').addEventListener('click', () => this.clear());
         document.getElementById('cliente-select').addEventListener('change', e => this.onClienteChange(e.target.value));
         document.getElementById('descuento-manual').addEventListener('input', e => this.onManualDiscountChange(e.target.value));
+        document.getElementById('pedido-encargo-toggle').addEventListener('change', e => this.onPendingToggle(e.target.checked));
         document.addEventListener('keydown', e => this.onGlobalKey(e));
         cartBody.addEventListener('click', e => {
             const actionBtn = e.target.closest('[data-cart-action]');
@@ -358,34 +370,49 @@ const POS = {
     },
 
     // --- Cart ---
-    addFromResult(el) {
-        const id = parseInt(el.dataset.id);
-        const nombre = el.dataset.nombre;
-        const precio = parseFloat(el.dataset.precio);
-        const stock = parseInt(el.dataset.stock);
+    addProduct(product) {
+        const { id, nombre, precio, stock } = product;
 
-        if (stock <= 0) {
-            showToast(`${nombre} no tiene stock disponible`, 'warning');
-            return;
+        if (!this.isPendingOrder && stock <= 0) {
+            return { ok: false, code: 'no_stock' };
         }
 
         const existing = this.cart.find(i => i.id === id);
         if (existing) {
-            if (existing.qty < stock) {
-                existing.qty++;
-            } else {
-                showToast(`Stock máximo alcanzado (${stock})`, 'warning');
+            if (!this.isPendingOrder && existing.qty >= stock) {
+                return { ok: false, code: 'max_stock', stock };
             }
+            existing.qty++;
         } else {
             this.cart.push({ id, nombre, precio, qty: 1, stock });
+        }
+
+        this.saveState();
+        this.updateUI();
+        return { ok: true, code: existing ? 'incremented' : 'added' };
+    },
+
+    addFromResult(el) {
+        const id = parseInt(el.dataset.id, 10);
+        const nombre = el.dataset.nombre;
+        const precio = parseFloat(el.dataset.precio);
+        const stock = parseInt(el.dataset.stock, 10);
+        const result = this.addProduct({ id, nombre, precio, stock });
+
+        if (result.code === 'no_stock') {
+            showToast(`${nombre} no tiene stock disponible`, 'warning');
+            return;
+        }
+
+        if (result.code === 'max_stock') {
+            showToast(`Stock máximo alcanzado (${stock})`, 'warning');
+            return;
         }
 
         this.hideResults();
         const search = document.getElementById('product-search');
         search.value = '';
         search.focus();
-        this.saveState();
-        this.updateUI();
     },
 
     updateQty(id, val) {
@@ -393,7 +420,7 @@ const POS = {
         if (!item) return;
         val = parseInt(val);
         if (isNaN(val) || val <= 0) { this.removeItem(id); return; }
-        if (val > item.stock) {
+        if (!this.isPendingOrder && val > item.stock) {
             showToast(`Solo hay ${item.stock} unidades`, 'warning');
             item.qty = item.stock;
         } else {
@@ -407,7 +434,6 @@ const POS = {
         this.cart = this.cart.filter(i => i.id !== id);
         this.saveState();
         this.updateUI();
-        document.getElementById('product-search').focus();
     },
 
     // --- Payment ---
@@ -417,6 +443,12 @@ const POS = {
             b.classList.toggle('active', b.dataset.method === method)
         );
         this.saveState();
+    },
+
+    onPendingToggle(isPending) {
+        this.isPendingOrder = Boolean(isPending);
+        this.saveState();
+        this.updateUI();
     },
 
     async onClienteChange(clienteId) {
@@ -484,7 +516,7 @@ const POS = {
                     <td class="px-4 py-2 text-center">
                         <div class="inline-flex items-center border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
                             <button type="button" data-cart-action="decrement" data-item-id="${i.id}" class="px-2.5 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-300 text-sm font-bold">&minus;</button>
-                            <input type="number" value="${i.qty}" min="1" max="${i.stock}"
+                            <input type="number" value="${i.qty}" min="1" ${this.isPendingOrder ? '' : `max="${i.stock}"`}
                                    data-cart-qty-input data-item-id="${i.id}"
                                    class="w-10 text-center text-sm border-x border-gray-300 dark:border-gray-600 py-1 bg-transparent dark:text-white focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
                             <button type="button" data-cart-action="increment" data-item-id="${i.id}" class="px-2.5 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-300 text-sm font-bold">+</button>
@@ -509,6 +541,9 @@ const POS = {
         document.getElementById('summary-discount-breakdown').textContent = `Cliente ${this.descuentoClientePorcentaje.toFixed(2)}% + Manual ${this.descuentoManualPorcentaje.toFixed(2)}%`;
         document.getElementById('summary-total').textContent = `COP ${this.fmt(total)}`;
         document.getElementById('btn-confirmar').disabled = !this.cart.length;
+        document.getElementById('btn-confirmar').textContent = this.isPendingOrder
+            ? 'Registrar Pedido (F9)'
+            : 'Confirmar Venta (F9)';
         this.saveState();
     },
 
@@ -539,11 +574,13 @@ const POS = {
                     cliente: document.getElementById('cliente-nombre').value,
                     forma_pago: this.selectedPayment,
                     notas: document.getElementById('venta-notas').value,
+                    registrar_como_pendiente: this.isPendingOrder,
                 }),
             }, 15000);
             const data = await res.json();
             if (data.ok) {
-                showToast(`✓ Venta ${data.numero} — COP ${this.fmt(parseFloat(data.total))}`, 'success');
+                const label = data.estado === 'pendiente' ? 'Pedido' : 'Venta';
+                showToast(`✓ ${label} ${data.numero} — COP ${this.fmt(parseFloat(data.total))}`, 'success');
                 this.clear();
             } else {
                 showToast(data.error || data.errors?.join(', ') || 'Error', 'error');
@@ -555,7 +592,7 @@ const POS = {
             if (window.AppUX?.endButtonLoading && state) {
                 window.AppUX.endButtonLoading(btn, state, !this.cart.length);
             } else {
-                btn.textContent = 'Confirmar Venta (F9)';
+                btn.textContent = this.isPendingOrder ? 'Registrar Pedido (F9)' : 'Confirmar Venta (F9)';
                 btn.disabled = !this.cart.length;
             }
         }
@@ -563,11 +600,13 @@ const POS = {
 
     clear() {
         this.cart = [];
+        this.isPendingOrder = false;
         this.selectedPayment = 'efectivo';
         this.selectedClienteId = null;
         this.descuentoClientePorcentaje = 0;
         this.descuentoManualPorcentaje = 0;
         this.clearState();
+        document.getElementById('pedido-encargo-toggle').checked = false;
         document.getElementById('cliente-select').value = '';
         document.getElementById('descuento-manual').value = '0';
         document.getElementById('cliente-nombre').value = 'Cliente General';
