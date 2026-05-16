@@ -36,6 +36,7 @@ from django.db.models import Sum, Count
 from django.utils import timezone
 from datetime import timedelta, datetime
 from django.contrib.auth.decorators import permission_required
+from django.db import transaction
 from django.db.models.functions import TruncMonth, TruncDate, TruncWeek, TruncYear
 from django.core.serializers.json import DjangoJSONEncoder
 import json
@@ -165,17 +166,47 @@ def crear_producto(request):
         form = ProductoForm(request.POST, request.FILES)
         if form.is_valid():
             stock_inicial = form.cleaned_data.get('stock_inicial') or 0
-            producto = form.save(commit=False)
-            producto.stock = 0  # Stock managed via Movimiento
-            producto.save()
-            if stock_inicial > 0:
-                Movimiento.objects.create(
-                    producto=producto,
-                    tipo='entrada',
-                    cantidad=stock_inicial,
-                    descripcion='Stock inicial al crear producto',
-                    usuario=request.user.username,
-                )
+            with transaction.atomic():
+                producto = form.save(commit=False)
+                producto.stock = 0  # Stock managed via Movimiento
+                producto.save()
+
+                if stock_inicial > 0:
+                    proveedor_default, _ = Proveedor.objects.get_or_create(
+                        nombre='Proveedor Alta Inicial',
+                        defaults={
+                            'contacto_principal': 'Registro automático del sistema',
+                            'activo': True,
+                        },
+                    )
+
+                    orden_compra = OrdenCompra.objects.create(
+                        proveedor=proveedor_default,
+                        estado='completada',
+                        fecha_entrega_real=timezone.now().date(),
+                        notas=f'Compra automática por creación del producto "{producto.nombre}"',
+                        usuario_creador=request.user.username,
+                    )
+
+                    DetalleCompra.objects.create(
+                        orden_compra=orden_compra,
+                        producto=producto,
+                        cantidad_solicitada=stock_inicial,
+                        cantidad_recibida=stock_inicial,
+                        precio_unitario=producto.precio,
+                    )
+
+                    orden_compra.total = producto.precio * stock_inicial
+                    orden_compra.save(update_fields=['total'])
+
+                    Movimiento.objects.create(
+                        producto=producto,
+                        tipo='entrada',
+                        cantidad=stock_inicial,
+                        descripcion=f'Stock inicial por alta de producto ({orden_compra.numero})',
+                        usuario=request.user.username,
+                    )
+
             messages.success(request, f'Producto "{producto.nombre}" creado correctamente.')
             return redirect('inventario:detalle_producto', pk=producto.pk)
     else:

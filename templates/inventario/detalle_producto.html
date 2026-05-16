@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static role_tags %}
 
 {% block title %}{{ producto.nombre }} - El Solterito{% endblock %}
 {% block page_title %}Detalle de Producto{% endblock %}
@@ -43,6 +43,7 @@
                     </div>
                 </div>
 
+                {% if user|has_group:"Administrador" %}
                 <div class="mt-8 flex flex-col sm:flex-row sm:space-x-3 space-y-3 sm:space-y-0">
                     <a href="{% url 'inventario:editar_producto' producto.pk %}" class="btn-info">
                         Editar producto
@@ -54,6 +55,7 @@
                         Eliminar
                     </button>
                 </div>
+                {% endif %}
             </div>
         </div>
 
@@ -94,6 +96,7 @@
         {% endif %}
     </div>
 
+{% if user|has_group:"Administrador" %}
 <!-- Modal de eliminación -->
 <div id="deleteModal" class="modal-overlay hidden">
     <div class="modal-content text-center">
@@ -129,4 +132,5 @@
         }
     });
 </script>
+{% endif %}
 {% endblock %}
