@@ -398,11 +398,9 @@ Respuesta deseada:
 
 ## Fase 1 (Quick Wins, 1-2 semanas)
 
-- Mensajes de error/éxito más accionables.
-- Mejoras de foco y atajos en POS.
-- Confirmaciones robustas anti doble envío.
-- Dashboard con panel de alertas por rol.
-- Mejoras de tooltips y etiquetas en acciones.
+- Mensajes de error POS más prescriptivos por ítem conflictivo.
+- Profundizar feedback de concurrencia y sugerencia automática de ajuste.
+- Mejoras de tooltips y etiquetas en acciones/estados.
 
 Impacto esperado:
 
@@ -411,10 +409,10 @@ Impacto esperado:
 
 ## Fase 2 (Flujo y productividad, 2-4 semanas)
 
-- Wizard de alta de producto.
 - Persistencia de filtros y preferencias de vista.
-- Línea de tiempo en detalle de producto.
 - Segmentación avanzada en compra por proveedor.
+- Alerta de variación de precio fuera de rango histórico.
+- Retorno contextual desde detalle a listados con filtros/paginación.
 
 Impacto esperado:
 
@@ -426,7 +424,7 @@ Impacto esperado:
 - Cierre de turno guiado.
 - Alertas inteligentes de anomalías.
 - Métricas de eficiencia por rol.
-- Manejo avanzado de contingencias de red/concurrencia.
+- Reautenticación ligera y manejo de sesión expirada.
 
 Impacto esperado:
 
@@ -630,12 +628,12 @@ Escala usada:
 - Parcial: existe base funcional, pero faltan piezas clave UX/UI.
 - No cumple: no existe o no está operativo según lo definido en este plan.
 
-Resultado general estimado:
+Resultado general estimado actualizado:
 
-- Cumple: 11 de 34
-- Parcial: 13 de 34
-- No cumple: 10 de 34
-- Cobertura global aproximada: 45%
+- Cumple: 19 de 36
+- Parcial: 11 de 36
+- No cumple: 6 de 36
+- Cobertura funcional aproximada: 53% completa, con alto avance en cimientos UX operativos
 
 ## 15.1 Diagnóstico por bloques
 
@@ -649,8 +647,8 @@ Resultado general estimado:
 
 - Flujo base de venta rápida: Cumple
 - Validación de stock en backend transaccional: Cumple
-- Prevención fuerte de doble envío: Parcial
-- Persistencia temporal de carrito (recuperación): No cumple
+- Prevención fuerte de doble envío: Cumple
+- Persistencia temporal de carrito (recuperación): Cumple
 - Manejo UX de conflicto por concurrencia con sugerencia automática: Parcial
 - Feedback sonoro opcional / confirmación operativa: No cumple
 
@@ -659,22 +657,22 @@ Resultado general estimado:
 - Flujo base de compra rápida: Cumple
 - Lista inicial por proveedor: Cumple
 - Priorización visual por historial/frecuencia: Parcial
-- Alerta de precio fuera de rango histórico: No cumple
+- Alerta de precio fuera de rango histórico: Parcial
 - Reintento robusto sin perder carrito ante falla de red: Parcial
 
 ## D. Productos e inventario
 
 - Crear producto con proveedor principal: Cumple
 - Registro automático de compra y movimiento al crear con stock inicial: Cumple
-- Wizard de alta de producto (2 pasos): No cumple
-- Detección temprana de duplicados por similitud de nombre: No cumple
-- Línea de tiempo visual de movimientos en detalle: No cumple
-- Tendencia de stock 7/30 días en detalle: No cumple
+- Wizard de alta de producto (2 pasos): Cumple
+- Detección temprana de duplicados por similitud de nombre: Cumple
+- Línea de tiempo visual de movimientos en detalle: Cumple
+- Tendencia de stock 7/30 días en detalle: Cumple
 
 ## E. Dashboard y supervisión
 
 - Dashboard operativo base con métricas: Cumple
-- Priorización por rol ("qué hacer ahora"): Parcial
+- Priorización por rol ("qué hacer ahora"): Cumple
 - Panel de alertas accionables por urgencia: Parcial
 - Cierre de turno guiado: No cumple
 
@@ -683,7 +681,7 @@ Resultado general estimado:
 - Mensajes de éxito/error visibles (toast): Cumple
 - Mensajes accionables por causa exacta: Parcial
 - Preservación de datos en formularios con error: Parcial
-- Banner persistente ante desconexión / timeout: No cumple
+- Banner persistente ante desconexión / timeout: Cumple
 - Reautenticación ligera al expirar sesión y retorno de contexto: No cumple
 
 ## G. Eficiencia operativa
@@ -701,26 +699,26 @@ Resultado general estimado:
 
 ## 15.2 Hallazgos críticos (prioridad alta)
 
-- No existe estrategia sólida de recuperación ante fallo de red en POS.
-- Falta protección UX completa contra doble envío en operaciones críticas.
 - No hay flujo de cierre de turno para control operativo diario.
+- Falta convertir errores POS en respuestas más prescriptivas por ítem conflictivo.
 - No existe capa de alertas inteligentes de riesgo/urgencia por rol.
+- Sigue pendiente alerta histórica fuerte de precio en compra rápida.
+- Sigue pendiente UX amigable para 403 y sesión expirada.
 
 ## 15.3 Backlog priorizado (implementación recomendada)
 
 ## Prioridad P0 (inmediato: 1-2 semanas)
 
-- Fortalecer anti doble envío en POS venta/compra (botón, lock, idempotencia UI).
-- Banner y reintento para fallos de red en POS sin perder carrito.
 - Mensajes de error accionables por item conflictivo (stock/precio/cantidad).
-- Panel inicial en dashboard con "Qué hacer ahora" por rol.
+- Dashboard con alertas accionables por urgencia, no solo CTAs base.
+- Respuesta UX amigable para 403 y sesión expirada.
 
 ## Prioridad P1 (2-4 semanas)
 
-- Persistencia temporal de carrito en POS (localStorage con expiración).
-- Wizard de alta de producto (2 pasos + resumen de confirmación).
-- Vista de detalle de producto con línea de tiempo de movimientos.
 - Alerta de variación de precio en compra rápida.
+- Persistencia de filtros por módulo y retorno contextual desde detalle.
+- Resumen de riesgo en encabezado del detalle de producto.
+- Segmentación avanzada de productos por proveedor (más comprados, últimos, sin compra en 30 días).
 
 ## Prioridad P2 (4-6 semanas)
 
@@ -740,149 +738,73 @@ Una mejora se considera lista solo si cumple todos estos criterios:
 
 ## 16. Siguiente paso recomendado
 
-Para pasar de diagnóstico a ejecución, el siguiente entregable debe ser:
+Para pasar de lo ya implementado al siguiente nivel operativo, el siguiente entregable debe ser:
 
-- "Plan técnico por sprint" con tareas concretas por archivo (views, templates, JS, estilos), criterio de aceptación y pruebas por cada mejora P0/P1.
+- cierre del remanente P0 con mensajes POS más accionables y dashboard por urgencia real
+- cierre del remanente P1 con alerta histórica de precios y persistencia contextual de filtros
+- planificación dedicada de Sprint 4 para cierre de turno, accesibilidad integral y sesión expirada
 
-Con ese plan, la evolución UX/UI deja de ser conceptual y se vuelve una hoja de ruta implementable.
+Con esto, el documento deja de ser un plan teórico general y pasa a funcionar como backlog remanente de ejecución.
 
-## 17. Plan técnico por sprint (ejecutable)
+## 17. Plan técnico por sprint (remanente ejecutable)
 
 Convenciones:
 
 - Estimación en puntos: 1 (bajo), 2 (medio), 3 (alto).
 - Cada sprint debe cerrar con demo por rol y evidencia de pruebas.
 
-## Sprint 0 - Preparación y baseline (2-3 días)
+## Sprint 0 - Preparación y baseline (completado)
 
-Objetivo:
+Estado:
 
-- Preparar base técnica para medir mejoras UX sin romper flujos actuales.
+- Completado.
+- Ya existen utilidades comunes en app.js para bloqueo de botón, timeout fetch, banner de red, toasts y modales accesibles.
 
-Tareas por archivo:
+## Sprint 1 - P0 operativo POS y dashboard (parcialmente completado)
+
+Estado:
+
+- Ya implementado: lock anti doble envío, timeout y resiliencia base en POS, recuperación de carrito y bloque "Qué hacer ahora" por rol.
+
+Pendientes remanentes:
 
 - apps/inventario/views.py
-- Agregar logging estructurado en endpoints POS para errores y tiempos.
-
-- static/js/app.js
-- Crear utilidades comunes de UX: lock de botón, manejo de fetch con timeout, banner de red.
-
-- templates/base.html
-- Incluir contenedor global para banner de conectividad.
-
-Pruebas:
-
-- python manage.py check
-- Flujo manual: simular red lenta y validar banner.
-
-Criterio de aceptación:
-
-- Existe capa común para errores de red y bloqueo de acciones críticas.
-
-## Sprint 1 - P0 operativo POS y dashboard (1-2 semanas)
-
-Objetivo:
-
-- Reducir errores transaccionales y mejorar reacción del usuario en operación diaria.
-
-Tareas por archivo:
+- Estandarizar payload de error POS con sugerencia por item y contexto de concurrencia.
 
 - templates/inventario/venta_rapida.html
-- Implementar lock anti doble envío al confirmar.
-- Integrar reintento controlado cuando falle la API.
-- Mostrar mensajes por item conflictivo (stock o validación).
+- Mejorar mensajes por línea conflictiva con acción sugerida inmediata.
 
 - templates/inventario/compra_rapida.html
-- Implementar lock anti doble envío al confirmar.
-- Integrar reintento sin perder carrito.
-- Mostrar mensaje de error específico por producto.
-
-- apps/inventario/views.py
-- Estandarizar payload de error POS con código y detalle por item.
-- Agregar campo sugerencia en errores de concurrencia.
+- Mostrar conflicto de precio/cantidad con recomendación operativa más clara.
 
 - templates/inventario/dashboard.html
-- Agregar bloque "Qué hacer ahora" por rol.
-- Agregar alertas accionables del día con CTA directo.
+- Evolucionar de CTA base a alertas accionables ordenadas por urgencia.
 
-Pruebas:
+## Sprint 2 - P1 productividad y calidad de dato (parcialmente completado)
 
-- python manage.py check
-- Prueba manual vendedor: dos clics rápidos en confirmar venta, no duplica.
-- Prueba manual bodeguero: caída de red durante compra, carrito permanece.
-- Prueba manual por rol: dashboard muestra CTAs correctos.
+Estado:
 
-Criterio de aceptación:
+- Ya implementado: persistencia temporal de carrito en compra/venta, endpoint de similitud, validación de duplicados y wizard de 2 pasos en alta de producto.
 
-- No hay doble envío en POS.
-- Errores POS siempre devuelven acción sugerida legible.
-- Dashboard presenta prioridades distintas por rol.
-
-## Sprint 2 - P1 productividad y calidad de dato (2-4 semanas)
-
-Objetivo:
-
-- Subir velocidad operativa y reducir retrabajo en alta y reposición.
-
-Tareas por archivo:
-
-- templates/inventario/venta_rapida.html
-- Persistencia temporal de carrito con expiración.
+Pendientes remanentes:
 
 - templates/inventario/compra_rapida.html
-- Persistencia temporal de carrito con expiración.
-- Indicador visual de variación de precio respecto a histórico.
+- Indicador fuerte de variación de precio respecto al histórico.
 
 - apps/inventario/views.py
-- Endpoint de referencia de precio histórico por producto y proveedor.
-- Endpoint para detectar similitud de nombre en alta de producto.
+- Elevar la referencia histórica actual a regla/umbral de alerta visible.
 
-- templates/inventario/crear_producto.html
-- Convertir formulario en wizard de 2 pasos.
-- Vista previa final antes de confirmar.
+- templates/inventario/lista_productos.html y vistas relacionadas
+- Persistencia contextual de filtros y retorno desde detalle sin perder estado.
 
-- apps/inventario/forms.py
-- Validación adicional para duplicidad por similitud y mensaje sugerido.
+## Sprint 3 - P1 visibilidad de inventario (completado)
 
-Pruebas:
+Estado:
 
-- python manage.py check
-- Test manual: cerrar y reabrir pestaña en POS, recuperar carrito vigente.
-- Test manual: alta producto con nombre similar, mostrar advertencia.
+- Completado.
+- El detalle de producto ya muestra línea de tiempo de movimientos, tendencia 7/30 días, acciones contextuales y desactivación para productos con historial.
 
-Criterio de aceptación:
-
-- El usuario puede recuperar carrito sin pérdida tras recarga.
-- Alta de producto tiene flujo guiado con confirmación de resumen.
-
-## Sprint 3 - P1 visibilidad de inventario (2 semanas)
-
-Objetivo:
-
-- Mejorar decisiones de reposición con contexto visual en producto.
-
-Tareas por archivo:
-
-- templates/inventario/detalle_producto.html
-- Agregar timeline de movimientos con codificación visual por tipo.
-- Agregar mini tendencia de stock (7 y 30 días).
-
-- apps/inventario/views.py
-- Construir datos agregados de tendencia por día para detalle.
-
-- static/js/app.js
-- Utilidad de render ligero para serie de tendencia.
-
-Pruebas:
-
-- python manage.py check
-- Validación manual en productos con y sin movimientos.
-
-Criterio de aceptación:
-
-- Cada detalle de producto muestra trazabilidad reciente clara y tendencia simple.
-
-## Sprint 4 - P2 cierre, accesibilidad y robustez (4-6 semanas)
+## Sprint 4 - P2 cierre, accesibilidad y robustez (pendiente)
 
 Objetivo:
 
@@ -895,7 +817,8 @@ Tareas por archivo:
 
 - templates/inventario
 - Crear pantalla de cierre de turno y componentes de checklist.
-- Mejorar atributos ARIA, focos visibles y navegación por teclado.
+- Completar UX de sesión expirada y 403 amigables.
+- Profundizar accesibilidad de formularios y tablas secundarias.
 
 - static/css/estilo.css
 - Ajustes de contraste y estilos de foco WCAG AA.
