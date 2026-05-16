@@ -1132,6 +1132,52 @@ def api_producto_detalle(request, pk):
     })
 
 
+@login_required
+@role_required(ROLE_ADMIN, ROLE_BODEGUERO)
+@require_http_methods(["GET"])
+def api_producto_precio_referencia(request, pk):
+    """Retorna precio promedio y ultimo precio de compra para un producto/proveedor."""
+    from decimal import Decimal, InvalidOperation
+
+    producto = get_object_or_404(Producto, pk=pk, activo=True)
+    proveedor_id = request.GET.get('proveedor_id')
+    precio_actual_raw = request.GET.get('precio')
+
+    detalles = DetalleCompra.objects.filter(producto=producto).select_related('orden_compra')
+    if proveedor_id and str(proveedor_id).isdigit():
+        detalles = detalles.filter(orden_compra__proveedor_id=int(proveedor_id))
+
+    detalles = detalles.order_by('-fecha_creacion')
+    recientes = list(detalles.values_list('precio_unitario', flat=True)[:5])
+
+    if not recientes:
+        return JsonResponse({'ok': True, 'has_reference': False})
+
+    promedio = sum(recientes, Decimal('0')) / Decimal(len(recientes))
+    ultimo = recientes[0]
+
+    variacion = None
+    if precio_actual_raw is not None:
+        try:
+            precio_actual = Decimal(str(precio_actual_raw))
+            if promedio > 0:
+                variacion = ((precio_actual - promedio) / promedio) * Decimal('100')
+        except (InvalidOperation, ValueError, TypeError):
+            variacion = None
+
+    payload = {
+        'ok': True,
+        'has_reference': True,
+        'precio_promedio': str(promedio.quantize(Decimal('0.01'))),
+        'precio_ultimo': str(ultimo.quantize(Decimal('0.01'))),
+        'muestras': len(recientes),
+    }
+    if variacion is not None:
+        payload['variacion_pct'] = float(round(variacion, 2))
+
+    return JsonResponse(payload)
+
+
 # ============================================================================
 # POS - VENTA RÁPIDA
 # ============================================================================

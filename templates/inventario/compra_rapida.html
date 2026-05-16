@@ -6,7 +6,6 @@
 
 {% block content %}
 {% csrf_token %}
-<!-- Supplier section at top -->
 <div class="card p-4 mb-4 space-y-3">
     <div>
         <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Proveedor <span class="text-red-500">*</span></label>
@@ -27,9 +26,7 @@
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
-    <!-- Left: Search + Cart (3/5) -->
     <div class="lg:col-span-3 space-y-4">
-        <!-- Search + Provider Product List -->
         <div class="card p-4">
             <div class="flex items-center bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 px-3">
                 <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
@@ -42,7 +39,6 @@
             <div id="search-results" class="mt-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 max-h-72 overflow-y-auto hidden"></div>
         </div>
 
-        <!-- Cart -->
         <div class="card p-6">
             <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
                 <h2 class="card-header">Productos a comprar</h2>
@@ -59,8 +55,7 @@
                             <th class="px-4 py-2.5 w-10"></th>
                         </tr>
                     </thead>
-                    <tbody id="cart-body" class="divide-y divide-gray-100 dark:divide-gray-700">
-                    </tbody>
+                    <tbody id="cart-body" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody>
                 </table>
             </div>
             <div id="empty-cart" class="px-4 py-8 text-center">
@@ -70,8 +65,8 @@
         </div>
     </div>
 
-    <!-- Right: Summary (2/5) -->
     <div class="lg:col-span-2 space-y-4">
+        <div class="card p-4">
             <div class="space-y-2 mb-3">
                 <div class="flex justify-between text-sm">
                     <span class="text-gray-500 dark:text-gray-400">Items</span>
@@ -102,7 +97,6 @@
             </button>
         </div>
 
-        <!-- Keyboard shortcuts -->
         <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 p-3 space-y-1">
             <p class="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">Atajos de teclado</p>
             <p class="text-xs text-gray-500 dark:text-gray-400"><kbd class="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs font-mono">F2</kbd> Buscar producto</p>
@@ -121,12 +115,18 @@
 <script>
 const COMPRA = {
     cart: [],
+    priceReferences: {},
     searchTimeout: null,
     selectedIdx: -1,
     csrfToken: document.querySelector('[name=csrfmiddlewaretoken]').value,
+    storageKey: 'pos_compra_state_v1',
+    storageTtlMs: 1000 * 60 * 45,
 
     init() {
+        this.loadState();
         this.bindEvents();
+        const selectedProvider = document.getElementById('proveedor-select').value;
+        if (selectedProvider) this.onProveedorChange(selectedProvider);
         this.updateUI();
     },
 
@@ -136,46 +136,109 @@ const COMPRA = {
         search.addEventListener('keydown', e => this.onSearchKey(e));
         search.addEventListener('focus', () => { if (search.value.length >= 2) this.onSearch(search.value); });
 
-        const state = window.AppUX?.beginButtonLoading
-            ? window.AppUX.beginButtonLoading(btn, 'Procesando...')
-            : null;
-        if (!state) {
-            btn.disabled = true;
-            btn.textContent = 'Procesando...';
-        }
+        document.getElementById('btn-confirmar').addEventListener('click', () => this.submit());
+        document.getElementById('btn-limpiar').addEventListener('click', () => this.clear());
+        document.getElementById('proveedor-select').addEventListener('change', e => this.onProveedorChange(e.target.value));
+        document.getElementById('compra-notas').addEventListener('input', () => this.saveState());
         document.addEventListener('keydown', e => this.onGlobalKey(e));
     },
-            const requestFn = window.AppUX?.fetchWithTimeout
-                ? window.AppUX.fetchWithTimeout
-                : (url, opts) => fetch(url, opts);
 
-            const res = await requestFn('{% url "inventario:api_pos_compra" %}', {
-    // --- Proveedor ---
+    saveState() {
+        try {
+            const payload = {
+                savedAt: Date.now(),
+                proveedorId: document.getElementById('proveedor-select').value || '',
+                notas: document.getElementById('compra-notas').value || '',
+                cart: this.cart,
+            };
+            localStorage.setItem(this.storageKey, JSON.stringify(payload));
+        } catch (e) {}
+    },
+
+    loadState() {
+        try {
+            const raw = localStorage.getItem(this.storageKey);
+            if (!raw) return;
+            const data = JSON.parse(raw);
+            if (!data || !data.savedAt || (Date.now() - data.savedAt) > this.storageTtlMs) {
+                localStorage.removeItem(this.storageKey);
+                return;
+            }
+            this.cart = Array.isArray(data.cart) ? data.cart : [];
+            document.getElementById('proveedor-select').value = data.proveedorId || '';
+            document.getElementById('compra-notas').value = data.notas || '';
+            if (this.cart.length) showToast('Carrito de compra recuperado', 'info');
+        } catch (e) {
+            localStorage.removeItem(this.storageKey);
+        }
+    },
+
+    clearState() {
+        localStorage.removeItem(this.storageKey);
+    },
+
+    async hydratePriceReference(item) {
+        const provId = document.getElementById('proveedor-select').value;
+        if (!provId) return;
+        try {
+            const url = new URL(`{% url 'inventario:api_producto_precio_referencia' 0 %}`.replace('/0/', `/${item.id}/`), window.location.origin);
+            url.searchParams.set('proveedor_id', provId);
+            url.searchParams.set('precio', item.precio);
+            const requestFn = window.AppUX?.fetchWithTimeout ? window.AppUX.fetchWithTimeout : (u, o) => fetch(u, o);
+            const res = await requestFn(url.toString(), {}, 8000);
+            const data = await res.json();
+            if (data.ok && data.has_reference) {
+                this.priceReferences[item.id] = {
+                    avg: parseFloat(data.precio_promedio),
+                    last: parseFloat(data.precio_ultimo),
+                    variationPct: typeof data.variacion_pct === 'number' ? data.variacion_pct : null,
+                };
+                this.updateUI();
+            }
+        } catch (e) {}
+    },
+
+    recalculateReferenceVariation(itemId) {
+        const ref = this.priceReferences[itemId];
+        const item = this.cart.find(i => i.id === itemId);
+        if (!ref || !item || !ref.avg || ref.avg <= 0) return;
+        ref.variationPct = ((item.precio - ref.avg) / ref.avg) * 100;
+    },
+
+    referenceLabel(itemId) {
+        const ref = this.priceReferences[itemId];
+        if (!ref || typeof ref.variationPct !== 'number') return '';
+        const abs = Math.abs(ref.variationPct);
+        if (abs < 15) return '';
+        const isHigh = ref.variationPct > 0;
+        const colorClass = isHigh
+            ? 'text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/30'
+            : 'text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/30';
+        const direction = isHigh ? 'sobre' : 'bajo';
+        return `<span class="inline-flex mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${colorClass}">${abs.toFixed(1)}% ${direction} promedio</span>`;
+    },
+
     onProveedorChange(proveedorId) {
         const search = document.getElementById('product-search');
         if (proveedorId) {
-            // Habilitar búsqueda
             search.disabled = false;
             search.placeholder = 'Buscar producto por nombre o código... (F2)';
-            }, 15000);
-            // Cargar lista inicial del proveedor cuando no hay búsqueda.
-            if (search.value.length >= 2) {
-                this.onSearch(search.value);
-            } else {
-                this.loadProveedorProducts(proveedorId);
-            }
+            search.focus();
+            if (search.value.length >= 2) this.onSearch(search.value);
+            else this.loadProveedorProducts(proveedorId);
         } else {
-            // Deshabilitar búsqueda
-            const isTimeout = e?.name === 'AbortError';
-            showToast(isTimeout ? 'Tiempo de espera agotado. Reintenta.' : 'Error de conexión', 'error');
+            search.disabled = true;
             search.placeholder = 'Selecciona un proveedor primero...';
             search.value = '';
-            if (window.AppUX?.endButtonLoading && state) {
-                window.AppUX.endButtonLoading(btn, state, !this.cart.length || !provSelected);
-            } else {
-                btn.textContent = 'Confirmar Compra (F9)';
-                btn.disabled = !this.cart.length || !provSelected;
-            }
+            this.hideResults();
+        }
+
+        this.priceReferences = {};
+        if (this.cart.length && proveedorId) {
+            this.cart.forEach(item => this.hydratePriceReference(item));
+        }
+        this.saveState();
+        this.updateUI();
     },
 
     async loadProveedorProducts(proveedorId) {
@@ -190,30 +253,27 @@ const COMPRA = {
         }
     },
 
-    // --- Search ---
     onSearch(q) {
         clearTimeout(this.searchTimeout);
         if (q.length < 2) {
             const proveedorId = document.getElementById('proveedor-select').value;
-            if (proveedorId) {
-                this.loadProveedorProducts(proveedorId);
-            } else {
-                this.hideResults();
-            }
+            if (proveedorId) this.loadProveedorProducts(proveedorId);
+            else this.hideResults();
             return;
         }
+
         this.searchTimeout = setTimeout(async () => {
             try {
                 const url = new URL(`{% url 'inventario:api_buscar_productos' %}`, window.location.origin);
                 url.searchParams.set('q', q);
                 const proveedorId = document.getElementById('proveedor-select').value;
-                if (proveedorId) {
-                    url.searchParams.set('proveedor_id', proveedorId);
-                }
+                if (proveedorId) url.searchParams.set('proveedor_id', proveedorId);
                 const res = await fetch(url.toString());
                 const data = await res.json();
                 this.showResults(data);
-            } catch(e) { this.hideResults(); }
+            } catch (e) {
+                this.hideResults();
+            }
         }, 200);
     },
 
@@ -225,6 +285,7 @@ const COMPRA = {
             el.classList.remove('hidden');
             return;
         }
+
         el.innerHTML = products.map((p, i) => `
             <div class="search-result px-4 py-2.5 cursor-pointer flex justify-between items-center border-b border-gray-100 dark:border-gray-700 last:border-0 transition"
                  data-idx="${i}" data-id="${p.id}" data-nombre="${this.esc(p.nombre)}" data-precio="${p.precio}" data-stock="${p.stock}">
@@ -238,10 +299,9 @@ const COMPRA = {
                 </div>
             </div>
         `).join('');
+
         el.classList.remove('hidden');
-        el.querySelectorAll('.search-result').forEach(r => {
-            r.addEventListener('click', () => this.addFromResult(r));
-        });
+        el.querySelectorAll('.search-result').forEach(r => r.addEventListener('click', () => this.addFromResult(r)));
     },
 
     hideResults() {
@@ -262,11 +322,8 @@ const COMPRA = {
             this.highlightResults(items);
         } else if (e.key === 'Enter') {
             e.preventDefault();
-            if (this.selectedIdx >= 0 && items[this.selectedIdx]) {
-                this.addFromResult(items[this.selectedIdx]);
-            } else if (items.length === 1) {
-                this.addFromResult(items[0]);
-            }
+            if (this.selectedIdx >= 0 && items[this.selectedIdx]) this.addFromResult(items[this.selectedIdx]);
+            else if (items.length === 1) this.addFromResult(items[0]);
         } else if (e.key === 'Escape') {
             this.hideResults();
         }
@@ -274,12 +331,9 @@ const COMPRA = {
 
     highlightResults(items) {
         items.forEach((r, i) => r.classList.toggle('highlighted', i === this.selectedIdx));
-        if (this.selectedIdx >= 0 && items[this.selectedIdx]) {
-            items[this.selectedIdx].scrollIntoView({ block: 'nearest' });
-        }
+        if (this.selectedIdx >= 0 && items[this.selectedIdx]) items[this.selectedIdx].scrollIntoView({ block: 'nearest' });
     },
 
-    // --- Cart ---
     addFromResult(el) {
         const id = parseInt(el.dataset.id);
         const nombre = el.dataset.nombre;
@@ -287,16 +341,17 @@ const COMPRA = {
         const stock = parseInt(el.dataset.stock);
 
         const existing = this.cart.find(i => i.id === id);
-        if (existing) {
-            existing.qty++;
-        } else {
+        if (existing) existing.qty++;
+        else {
             this.cart.push({ id, nombre, precio, qty: 1, stock });
+            this.hydratePriceReference({ id, precio });
         }
 
         const search = document.getElementById('product-search');
         search.value = '';
         const proveedorId = document.getElementById('proveedor-select').value;
         if (proveedorId) this.loadProveedorProducts(proveedorId);
+        this.saveState();
         search.focus();
         this.updateUI();
     },
@@ -307,6 +362,7 @@ const COMPRA = {
         val = parseInt(val);
         if (isNaN(val) || val <= 0) { this.removeItem(id); return; }
         item.qty = val;
+        this.saveState();
         this.updateUI();
     },
 
@@ -316,16 +372,19 @@ const COMPRA = {
         val = parseFloat(val);
         if (isNaN(val) || val < 0) val = 0;
         item.precio = val;
+        this.recalculateReferenceVariation(id);
+        this.saveState();
         this.updateUI();
     },
 
     removeItem(id) {
         this.cart = this.cart.filter(i => i.id !== id);
+        delete this.priceReferences[id];
+        this.saveState();
         this.updateUI();
         document.getElementById('product-search').focus();
     },
 
-    // --- UI ---
     getTotal() { return this.cart.reduce((s, i) => s + i.precio * i.qty, 0); },
     getTotalQty() { return this.cart.reduce((s, i) => s + i.qty, 0); },
 
@@ -349,16 +408,13 @@ const COMPRA = {
                     <td class="px-4 py-2 text-center">
                         <div class="inline-flex items-center border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
                             <button onclick="COMPRA.updateQty(${i.id}, ${i.qty - 1})" class="px-2.5 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-300 text-sm font-bold">&minus;</button>
-                            <input type="number" value="${i.qty}" min="1"
-                                   onchange="COMPRA.updateQty(${i.id}, this.value)"
-                                   class="w-10 text-center text-sm border-x border-gray-300 dark:border-gray-600 py-1 bg-transparent dark:text-white focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
+                            <input type="number" value="${i.qty}" min="1" onchange="COMPRA.updateQty(${i.id}, this.value)" class="w-10 text-center text-sm border-x border-gray-300 dark:border-gray-600 py-1 bg-transparent dark:text-white focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
                             <button onclick="COMPRA.updateQty(${i.id}, ${i.qty + 1})" class="px-2.5 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-300 text-sm font-bold">+</button>
                         </div>
                     </td>
                     <td class="px-4 py-2 text-right">
-                        <input type="number" value="${i.precio}" min="0" step="100"
-                               onchange="COMPRA.updatePrice(${i.id}, this.value)"
-                               class="w-28 text-right text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 bg-transparent dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
+                        <input type="number" value="${i.precio}" min="0" step="100" onchange="COMPRA.updatePrice(${i.id}, this.value)" class="w-28 text-right text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 bg-transparent dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
+                        ${this.referenceLabel(i.id)}
                     </td>
                     <td class="px-4 py-2 text-right font-semibold text-gray-800 dark:text-white text-sm">COP ${this.fmt(i.precio * i.qty)}</td>
                     <td class="px-2 py-2 text-center">
@@ -375,21 +431,24 @@ const COMPRA = {
         document.getElementById('summary-subtotal').textContent = `COP ${this.fmt(total)}`;
         document.getElementById('summary-total').textContent = `COP ${this.fmt(total)}`;
         document.getElementById('btn-confirmar').disabled = !this.cart.length || !provSelected;
+        this.saveState();
     },
 
-    // --- Submit ---
     async submit() {
         if (!this.cart.length) return;
         const provId = document.getElementById('proveedor-select').value;
         if (!provId) { showToast('Selecciona un proveedor', 'warning'); return; }
 
         const btn = document.getElementById('btn-confirmar');
-        const origText = btn.textContent;
-        btn.disabled = true;
-        btn.textContent = 'Procesando...';
+        const state = window.AppUX?.beginButtonLoading ? window.AppUX.beginButtonLoading(btn, 'Procesando...') : null;
+        if (!state) {
+            btn.disabled = true;
+            btn.textContent = 'Procesando...';
+        }
 
         try {
-            const res = await fetch('{% url "inventario:api_pos_compra" %}', {
+            const requestFn = window.AppUX?.fetchWithTimeout ? window.AppUX.fetchWithTimeout : (url, opts) => fetch(url, opts);
+            const res = await requestFn('{% url "inventario:api_pos_compra" %}', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.csrfToken },
                 body: JSON.stringify({
@@ -397,7 +456,7 @@ const COMPRA = {
                     proveedor_id: parseInt(provId),
                     notas: document.getElementById('compra-notas').value,
                 }),
-            });
+            }, 15000);
             const data = await res.json();
             if (data.ok) {
                 showToast(`✓ Compra ${data.numero} — COP ${this.fmt(parseFloat(data.total))}`, 'success');
@@ -405,25 +464,30 @@ const COMPRA = {
             } else {
                 showToast(data.error || 'Error', 'error');
             }
-        } catch(e) {
-            showToast('Error de conexión', 'error');
+        } catch (e) {
+            const isTimeout = e?.name === 'AbortError';
+            showToast(isTimeout ? 'Tiempo de espera agotado. Reintenta.' : 'Error de conexión', 'error');
         } finally {
-            btn.textContent = origText;
             const provSelected = !!document.getElementById('proveedor-select').value;
-            btn.disabled = !this.cart.length || !provSelected;
+            if (window.AppUX?.endButtonLoading && state) {
+                window.AppUX.endButtonLoading(btn, state, !this.cart.length || !provSelected);
+            } else {
+                btn.textContent = 'Confirmar Compra (F9)';
+                btn.disabled = !this.cart.length || !provSelected;
+            }
         }
     },
 
     clear() {
         this.cart = [];
-        const provSelect = document.getElementById('proveedor-select');
-        provSelect.value = '';
+        this.priceReferences = {};
+        document.getElementById('proveedor-select').value = '';
         document.getElementById('compra-notas').value = '';
-        this.onProveedorChange(''); // Deshabilitar búsqueda
+        this.clearState();
+        this.onProveedorChange('');
         this.updateUI();
     },
 
-    // --- Keyboard ---
     onGlobalKey(e) {
         if (e.key === 'F2') {
             e.preventDefault();
@@ -434,23 +498,17 @@ const COMPRA = {
             this.submit();
         } else if (e.key === 'Escape') {
             e.preventDefault();
-            if (!document.getElementById('search-results').classList.contains('hidden')) {
-                this.hideResults();
-            } else {
-                this.clear();
-            }
+            if (!document.getElementById('search-results').classList.contains('hidden')) this.hideResults();
+            else this.clear();
         }
     },
 
-    // --- Helpers ---
     fmt(n) { return Math.round(n).toLocaleString('es-CO'); },
     esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; },
 };
 
 document.addEventListener('DOMContentLoaded', () => {
     COMPRA.init();
-    // Re-validate confirm button when provider changes
-    document.getElementById('proveedor-select').addEventListener('change', () => COMPRA.updateUI());
 });
 </script>
 {% endblock %}

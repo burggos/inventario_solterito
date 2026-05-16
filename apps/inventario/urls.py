@@ -53,6 +53,7 @@ urlpatterns = [
     # API (AJAX)
     path('api/productos/buscar/', views.api_buscar_productos, name='api_buscar_productos'),
     path('api/productos/<int:pk>/', views.api_producto_detalle, name='api_producto_detalle'),
+    path('api/productos/<int:pk>/precio-referencia/', views.api_producto_precio_referencia, name='api_producto_precio_referencia'),
     path('api/clientes/<int:pk>/descuento/', views.api_cliente_descuento, name='api_cliente_descuento'),
     path('api/pos/venta/', views.api_pos_venta, name='api_pos_venta'),
     path('api/pos/compra/', views.api_pos_compra, name='api_pos_compra'),

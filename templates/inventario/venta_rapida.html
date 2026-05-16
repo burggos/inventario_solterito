@@ -174,11 +174,70 @@ const POS = {
     searchTimeout: null,
     selectedIdx: -1,
     csrfToken: document.querySelector('[name=csrfmiddlewaretoken]').value,
+    storageKey: 'pos_venta_state_v1',
+    storageTtlMs: 1000 * 60 * 45,
 
     init() {
+        this.loadState();
         this.bindEvents();
+        if (this.selectedClienteId) {
+            this.onClienteChange(this.selectedClienteId);
+        }
         this.updateUI();
         document.getElementById('product-search').focus();
+    },
+
+    saveState() {
+        try {
+            const payload = {
+                savedAt: Date.now(),
+                cart: this.cart,
+                selectedPayment: this.selectedPayment,
+                selectedClienteId: this.selectedClienteId,
+                descuentoManualPorcentaje: this.descuentoManualPorcentaje,
+                clienteNombre: document.getElementById('cliente-nombre').value || 'Cliente General',
+                notas: document.getElementById('venta-notas').value || '',
+            };
+            localStorage.setItem(this.storageKey, JSON.stringify(payload));
+        } catch (e) {
+            // ignore storage errors
+        }
+    },
+
+    loadState() {
+        try {
+            const raw = localStorage.getItem(this.storageKey);
+            if (!raw) return;
+            const data = JSON.parse(raw);
+            if (!data || !data.savedAt || (Date.now() - data.savedAt) > this.storageTtlMs) {
+                localStorage.removeItem(this.storageKey);
+                return;
+            }
+
+            this.cart = Array.isArray(data.cart) ? data.cart : [];
+            this.selectedPayment = data.selectedPayment || 'efectivo';
+            this.selectedClienteId = data.selectedClienteId || null;
+            this.descuentoManualPorcentaje = parseFloat(data.descuentoManualPorcentaje || 0);
+
+            document.getElementById('cliente-select').value = this.selectedClienteId || '';
+            document.getElementById('descuento-manual').value = this.descuentoManualPorcentaje;
+            document.getElementById('cliente-nombre').value = data.clienteNombre || 'Cliente General';
+            document.getElementById('venta-notas').value = data.notas || '';
+
+            document.querySelectorAll('.payment-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.method === this.selectedPayment);
+            });
+
+            if (this.cart.length) {
+                showToast('Carrito de venta recuperado', 'info');
+            }
+        } catch (e) {
+            localStorage.removeItem(this.storageKey);
+        }
+    },
+
+    clearState() {
+        localStorage.removeItem(this.storageKey);
     },
 
     bindEvents() {
@@ -304,6 +363,7 @@ const POS = {
         const search = document.getElementById('product-search');
         search.value = '';
         search.focus();
+        this.saveState();
         this.updateUI();
     },
 
@@ -318,11 +378,13 @@ const POS = {
         } else {
             item.qty = val;
         }
+        this.saveState();
         this.updateUI();
     },
 
     removeItem(id) {
         this.cart = this.cart.filter(i => i.id !== id);
+        this.saveState();
         this.updateUI();
         document.getElementById('product-search').focus();
     },
@@ -333,6 +395,7 @@ const POS = {
         document.querySelectorAll('.payment-btn').forEach(b =>
             b.classList.toggle('active', b.dataset.method === method)
         );
+        this.saveState();
     },
 
     async onClienteChange(clienteId) {
@@ -340,6 +403,7 @@ const POS = {
         if (!clienteId) {
             this.descuentoClientePorcentaje = 0;
             document.getElementById('cliente-nombre').value = 'Cliente General';
+            this.saveState();
             this.updateUI();
             return;
         }
@@ -348,9 +412,11 @@ const POS = {
             const data = await res.json();
             this.descuentoClientePorcentaje = parseFloat(data.descuento_porcentaje || 0);
             document.getElementById('cliente-nombre').value = data.nombre || 'Cliente General';
+            this.saveState();
             this.updateUI();
         } catch (e) {
             this.descuentoClientePorcentaje = 0;
+            this.saveState();
             this.updateUI();
         }
     },
@@ -363,6 +429,7 @@ const POS = {
         parsed = Math.max(0, Math.min(parsed, 100));
         this.descuentoManualPorcentaje = parsed;
         document.getElementById('descuento-manual').value = parsed;
+        this.saveState();
         this.updateUI();
     },
 
@@ -421,6 +488,7 @@ const POS = {
         document.getElementById('summary-discount-breakdown').textContent = `Cliente ${this.descuentoClientePorcentaje.toFixed(2)}% + Manual ${this.descuentoManualPorcentaje.toFixed(2)}%`;
         document.getElementById('summary-total').textContent = `COP ${this.fmt(total)}`;
         document.getElementById('btn-confirmar').disabled = !this.cart.length;
+        this.saveState();
     },
 
     // --- Submit ---
@@ -478,6 +546,7 @@ const POS = {
         this.selectedClienteId = null;
         this.descuentoClientePorcentaje = 0;
         this.descuentoManualPorcentaje = 0;
+        this.clearState();
         document.getElementById('cliente-select').value = '';
         document.getElementById('descuento-manual').value = '0';
         document.getElementById('cliente-nombre').value = 'Cliente General';
