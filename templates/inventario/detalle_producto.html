@@ -158,7 +158,7 @@
 
 {% if user|has_group:"Administrador" %}
 <!-- Modal de eliminación -->
-{% include 'includes/delete_modal.html' with modal_id='deleteModal' item_name=producto.nombre delete_url=request.path|add:'eliminar/' message='Esta accion no se puede deshacer.' %}
+{% include 'includes/delete_modal.html' with modal_id='deleteModal' item_name=producto.nombre delete_url=request.path|add:'eliminar/' title='¿Eliminar producto?' message='Esta accion no se puede deshacer.' confirm_label='Si, eliminar' confirm_class='btn-danger' %}
 {% endif %}
 
 {{ tendencia_stock_7|json_script:"trend-7-data" }}

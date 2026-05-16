@@ -5,6 +5,7 @@
 {% block page_title %}Detalle de Venta{% endblock %}
 
 {% block content %}
+    {% url 'inventario:cancelar_venta' venta.pk as cancelar_venta_url %}
     <div class="flex justify-between items-center mb-6">
         <div>
             <h2 class="text-2xl font-bold text-gray-800 dark:text-white">{{ venta.numero }}</h2>
@@ -15,16 +16,17 @@
                 Ver PDF
             </a>
             {% if venta.estado != 'cancelada' %}
-            <form method="post" action="{% url 'inventario:cancelar_venta' venta.pk %}" class="inline">
-                {% csrf_token %}
-                <button type="submit" class="inline-flex items-center justify-center bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white font-semibold text-sm px-4 py-2 rounded-lg shadow-sm transition" onclick="return confirm('¿Cancelar esta venta? El stock será revertido.')">
-                    Cancelar Venta
-                </button>
-            </form>
+            <button type="button" data-modal-target="#cancelVentaModal" class="inline-flex items-center justify-center bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white font-semibold text-sm px-4 py-2 rounded-lg shadow-sm transition">
+                Cancelar Venta
+            </button>
             {% endif %}
             <a href="{% url 'inventario:lista_ventas' %}" class="inline-flex items-center justify-center bg-gray-100 hover:bg-gray-200 dark:bg-gray-700/50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 font-medium text-sm px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 transition">Volver</a>
         </div>
     </div>
+
+    {% if venta.estado != 'cancelada' %}
+    {% include 'includes/delete_modal.html' with modal_id='cancelVentaModal' delete_url=cancelar_venta_url title='¿Cancelar esta venta?' message='El stock sera revertido automaticamente si confirmas esta accion.' confirm_label='Si, cancelar venta' confirm_class='btn-danger' %}
+    {% endif %}
 
     <!-- Encabezado -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
