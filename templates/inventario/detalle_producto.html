@@ -65,28 +65,27 @@
 
         <div class="border-t dark:border-gray-600 p-6 space-y-6">
             <div>
-                <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-4">Tendencia de stock (14 días)</h2>
-                <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-900/30">
-                    {% if tendencia_stock %}
-                    <div class="h-36 flex items-end gap-1">
-                        {% for punto in tendencia_stock %}
-                        <div class="flex-1 min-w-0 flex flex-col items-center justify-end">
-                            <div
-                                class="w-full rounded-t {% if punto.variacion < 0 %}bg-red-400 dark:bg-red-500{% elif punto.variacion > 0 %}bg-teal-500 dark:bg-teal-600{% else %}bg-gray-300 dark:bg-gray-600{% endif %}"
-                                style="height: {% if stock_max_tendencia %}{% widthratio punto.stock stock_max_tendencia 120 %}{% else %}4{% endif %}px"
-                                title="{{ punto.fecha }} | Stock: {{ punto.stock }} | +{{ punto.entrada }} / -{{ punto.salida }}"
-                            ></div>
+                <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-4">Tendencia de stock</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-900/30">
+                        <p class="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-3">7 días</p>
+                        <div id="trend-7-bars" class="h-28 flex items-end gap-1"></div>
+                        <div class="mt-2 grid grid-cols-3 text-xs text-gray-500 dark:text-gray-400">
+                            <span>{{ tendencia_stock_7.0.fecha }}</span>
+                            <span class="text-center">Hoy: {{ producto.stock }} uds</span>
+                            <span class="text-right">{{ hoy_label }}</span>
                         </div>
-                        {% endfor %}
                     </div>
-                    <div class="mt-3 grid grid-cols-3 text-xs text-gray-500 dark:text-gray-400">
-                        <span>{{ tendencia_stock.0.fecha }}</span>
-                        <span class="text-center">Hoy: {{ producto.stock }} uds</span>
-                        <span class="text-right">{{ hoy_label }}</span>
+
+                    <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-900/30">
+                        <p class="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-3">30 días</p>
+                        <div id="trend-30-bars" class="h-28 flex items-end gap-1"></div>
+                        <div class="mt-2 grid grid-cols-3 text-xs text-gray-500 dark:text-gray-400">
+                            <span>{{ tendencia_stock_30.0.fecha }}</span>
+                            <span class="text-center">Hoy: {{ producto.stock }} uds</span>
+                            <span class="text-right">{{ hoy_label }}</span>
+                        </div>
                     </div>
-                    {% else %}
-                    <p class="text-sm text-gray-500 dark:text-gray-400">No hay datos suficientes para la tendencia.</p>
-                    {% endif %}
                 </div>
             </div>
 
@@ -194,4 +193,18 @@
     });
 </script>
 {% endif %}
+
+{{ tendencia_stock_7|json_script:"trend-7-data" }}
+{{ tendencia_stock_30|json_script:"trend-30-data" }}
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const trend7 = JSON.parse(document.getElementById('trend-7-data').textContent || '[]');
+    const trend30 = JSON.parse(document.getElementById('trend-30-data').textContent || '[]');
+    if (window.AppUX && typeof window.AppUX.renderTrendBars === 'function') {
+        window.AppUX.renderTrendBars(document.getElementById('trend-7-bars'), trend7, { maxHeight: 96 });
+        window.AppUX.renderTrendBars(document.getElementById('trend-30-bars'), trend30, { maxHeight: 96 });
+    }
+});
+</script>
 {% endblock %}

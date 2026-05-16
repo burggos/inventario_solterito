@@ -1,4 +1,5 @@
 from django import forms
+from django.db.models import Q
 from .models import Movimiento, Producto, Categoria, Proveedor
 
 INPUT_CLS = 'mt-1 block w-full rounded-md border-gray-100 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400'
@@ -65,6 +66,32 @@ class ProductoForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['proveedor'].queryset = Proveedor.objects.filter(activo=True).order_by('nombre')
         self.fields['proveedor'].required = False
+        self.similares_sugeridos = []
+
+    def clean_nombre(self):
+        nombre = (self.cleaned_data.get('nombre') or '').strip()
+        if not nombre:
+            return nombre
+
+        exacto = Producto.objects.filter(nombre__iexact=nombre, activo=True).first()
+        if exacto:
+            raise forms.ValidationError(
+                f'Ya existe un producto activo con el mismo nombre: "{exacto.nombre}". Revisa el catálogo antes de crear otro.'
+            )
+
+        filtros = Q(nombre__icontains=nombre)
+        for token in [t for t in nombre.split() if len(t) >= 3]:
+            filtros |= Q(nombre__icontains=token)
+
+        similares = list(
+            Producto.objects.filter(activo=True)
+            .filter(filtros)
+            .values_list('nombre', flat=True)
+            .distinct()[:3]
+        )
+        self.similares_sugeridos = similares
+
+        return nombre
 
 class MovimientoForm(forms.ModelForm):
     """Form for manual inventory adjustments only. Sales/purchases go through POS."""
