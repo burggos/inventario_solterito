@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static role_tags %}
 
 {% block title %}Dashboard - El Solterito{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
@@ -190,6 +190,7 @@
 </div>
 
 <!-- Quick Actions -->
+{% if request.user|has_group:"Administrador" %}
 <div class="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4">
     <a href="{% url 'inventario:venta_rapida' %}" class="flex flex-col items-center p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-green-300 dark:hover:border-green-700 hover:shadow-md transition group">
         <div class="w-10 h-10 bg-green-50 dark:bg-green-900/30 rounded-lg flex items-center justify-center mb-2 group-hover:bg-green-100 dark:group-hover:bg-green-900/50 transition">
@@ -216,6 +217,7 @@
         <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Ajuste Inventario</span>
     </a>
 </div>
+{% endif %}
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
