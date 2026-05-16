@@ -136,12 +136,20 @@ const COMPRA = {
         search.addEventListener('keydown', e => this.onSearchKey(e));
         search.addEventListener('focus', () => { if (search.value.length >= 2) this.onSearch(search.value); });
 
-        document.getElementById('btn-confirmar').addEventListener('click', () => this.submit());
-        document.getElementById('btn-limpiar').addEventListener('click', () => this.clear());
-        document.getElementById('proveedor-select').addEventListener('change', e => this.onProveedorChange(e.target.value));
+        const state = window.AppUX?.beginButtonLoading
+            ? window.AppUX.beginButtonLoading(btn, 'Procesando...')
+            : null;
+        if (!state) {
+            btn.disabled = true;
+            btn.textContent = 'Procesando...';
+        }
         document.addEventListener('keydown', e => this.onGlobalKey(e));
     },
+            const requestFn = window.AppUX?.fetchWithTimeout
+                ? window.AppUX.fetchWithTimeout
+                : (url, opts) => fetch(url, opts);
 
+            const res = await requestFn('{% url "inventario:api_pos_compra" %}', {
     // --- Proveedor ---
     onProveedorChange(proveedorId) {
         const search = document.getElementById('product-search');
@@ -149,7 +157,7 @@ const COMPRA = {
             // Habilitar búsqueda
             search.disabled = false;
             search.placeholder = 'Buscar producto por nombre o código... (F2)';
-            search.focus();
+            }, 15000);
             // Cargar lista inicial del proveedor cuando no hay búsqueda.
             if (search.value.length >= 2) {
                 this.onSearch(search.value);
@@ -158,11 +166,16 @@ const COMPRA = {
             }
         } else {
             // Deshabilitar búsqueda
-            search.disabled = true;
+            const isTimeout = e?.name === 'AbortError';
+            showToast(isTimeout ? 'Tiempo de espera agotado. Reintenta.' : 'Error de conexión', 'error');
             search.placeholder = 'Selecciona un proveedor primero...';
             search.value = '';
-            this.hideResults();
-        }
+            if (window.AppUX?.endButtonLoading && state) {
+                window.AppUX.endButtonLoading(btn, state, !this.cart.length || !provSelected);
+            } else {
+                btn.textContent = 'Confirmar Compra (F9)';
+                btn.disabled = !this.cart.length || !provSelected;
+            }
     },
 
     async loadProveedorProducts(proveedorId) {

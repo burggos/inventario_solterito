@@ -41,6 +41,10 @@ from django.db.models.functions import TruncMonth, TruncDate, TruncWeek, TruncYe
 from django.core.serializers.json import DjangoJSONEncoder
 import json
 from django.views.decorators.http import require_http_methods
+import logging
+import time
+
+logger = logging.getLogger(__name__)
 
 @login_required
 def dashboard(request):
@@ -1161,13 +1165,17 @@ def api_pos_venta(request):
     from decimal import Decimal, InvalidOperation
     from django.db import transaction
 
+    start_ts = time.monotonic()
+
     try:
         data = json_mod.loads(request.body)
     except (json_mod.JSONDecodeError, TypeError):
+        logger.warning('pos_venta payload_invalido user=%s', request.user.username)
         return JsonResponse({'ok': False, 'error': 'Datos inválidos'}, status=400)
 
     items = data.get('items', [])
     if not items:
+        logger.info('pos_venta sin_items user=%s', request.user.username)
         return JsonResponse({'ok': False, 'error': 'No hay productos en la venta'}, status=400)
 
     cliente = (data.get('cliente', '') or '').strip() or 'Cliente General'
@@ -1179,6 +1187,7 @@ def api_pos_venta(request):
     try:
         descuento_manual_porcentaje = Decimal(str(descuento_manual_raw or 0))
     except (InvalidOperation, ValueError, TypeError):
+        logger.warning('pos_venta descuento_invalido user=%s valor=%s', request.user.username, descuento_manual_raw)
         return JsonResponse({'ok': False, 'error': 'Descuento manual inválido'}, status=400)
 
     if descuento_manual_porcentaje < 0 or descuento_manual_porcentaje > 100:
@@ -1284,6 +1293,16 @@ def api_pos_venta(request):
                     tipo=tipo_descuento,
                 )
 
+        duration_ms = int((time.monotonic() - start_ts) * 1000)
+        logger.info(
+            'pos_venta ok user=%s venta=%s items=%s total=%s dur_ms=%s',
+            request.user.username,
+            venta.numero,
+            len(items),
+            venta.total,
+            duration_ms,
+        )
+
         return JsonResponse({
             'ok': True,
             'venta_id': venta.pk,
@@ -1294,9 +1313,14 @@ def api_pos_venta(request):
         })
 
     except Producto.DoesNotExist:
+        logger.warning('pos_venta producto_no_encontrado user=%s', request.user.username)
         return JsonResponse({'ok': False, 'error': 'Producto no encontrado'}, status=400)
     except (ValueError, InvalidOperation, KeyError) as e:
+        logger.warning('pos_venta error_datos user=%s detalle=%s', request.user.username, str(e))
         return JsonResponse({'ok': False, 'error': f'Error en datos: {str(e)}'}, status=400)
+    except Exception as e:
+        logger.exception('pos_venta error_interno user=%s detalle=%s', request.user.username, str(e))
+        return JsonResponse({'ok': False, 'error': 'Error interno al procesar la venta'}, status=500)
 
 
 @login_required
@@ -1308,17 +1332,22 @@ def api_pos_compra(request):
     from decimal import Decimal, InvalidOperation
     from django.db import transaction
 
+    start_ts = time.monotonic()
+
     try:
         data = json_mod.loads(request.body)
     except (json_mod.JSONDecodeError, TypeError):
+        logger.warning('pos_compra payload_invalido user=%s', request.user.username)
         return JsonResponse({'ok': False, 'error': 'Datos inválidos'}, status=400)
 
     items = data.get('items', [])
     if not items:
+        logger.info('pos_compra sin_items user=%s', request.user.username)
         return JsonResponse({'ok': False, 'error': 'No hay productos en la compra'}, status=400)
 
     proveedor_id = data.get('proveedor_id')
     if not proveedor_id:
+        logger.info('pos_compra sin_proveedor user=%s', request.user.username)
         return JsonResponse({'ok': False, 'error': 'Selecciona un proveedor'}, status=400)
 
     notas = data.get('notas', '')
@@ -1381,6 +1410,17 @@ def api_pos_compra(request):
             orden.total = total
             orden.save(update_fields=['total'])
 
+        duration_ms = int((time.monotonic() - start_ts) * 1000)
+        logger.info(
+            'pos_compra ok user=%s orden=%s proveedor_id=%s items=%s total=%s dur_ms=%s',
+            request.user.username,
+            orden.numero,
+            proveedor_id,
+            len(items),
+            orden.total,
+            duration_ms,
+        )
+
         return JsonResponse({
             'ok': True,
             'orden_id': orden.pk,
@@ -1389,11 +1429,17 @@ def api_pos_compra(request):
         })
 
     except Proveedor.DoesNotExist:
+        logger.warning('pos_compra proveedor_no_encontrado user=%s proveedor_id=%s', request.user.username, proveedor_id)
         return JsonResponse({'ok': False, 'error': 'Proveedor no encontrado'}, status=400)
     except Producto.DoesNotExist:
+        logger.warning('pos_compra producto_no_encontrado user=%s', request.user.username)
         return JsonResponse({'ok': False, 'error': 'Producto no encontrado'}, status=400)
     except (ValueError, InvalidOperation, KeyError) as e:
+        logger.warning('pos_compra error_datos user=%s detalle=%s', request.user.username, str(e))
         return JsonResponse({'ok': False, 'error': f'Error en datos: {str(e)}'}, status=400)
+    except Exception as e:
+        logger.exception('pos_compra error_interno user=%s detalle=%s', request.user.username, str(e))
+        return JsonResponse({'ok': False, 'error': 'Error interno al procesar la compra'}, status=500)
 
 
 @login_required

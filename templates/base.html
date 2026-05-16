@@ -30,6 +30,8 @@
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 antialiased">
 
+<div id="network-status-banner" class="hidden fixed top-0 inset-x-0 z-[80] px-4 py-2 text-center text-sm font-medium bg-red-600 text-white"></div>
+
 {% if request.resolver_match.url_name != 'login' %}
 <!-- Mobile sidebar overlay -->
 <div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
@@ -248,6 +250,8 @@
 
     <!-- Toast container -->
     <div id="toast-container" class="fixed bottom-4 right-4 z-[60] space-y-2"></div>
+
+    <script src="{% static 'js/app.js' %}"></script>
 
     <script>
         // Sidebar toggle (mobile)

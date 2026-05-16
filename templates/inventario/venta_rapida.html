@@ -427,12 +427,20 @@ const POS = {
     async submit() {
         if (!this.cart.length) return;
         const btn = document.getElementById('btn-confirmar');
-        const origText = btn.textContent;
-        btn.disabled = true;
-        btn.textContent = 'Procesando...';
+        const state = window.AppUX?.beginButtonLoading
+            ? window.AppUX.beginButtonLoading(btn, 'Procesando...')
+            : null;
+        if (!state) {
+            btn.disabled = true;
+            btn.textContent = 'Procesando...';
+        }
 
         try {
-            const res = await fetch('{% url "inventario:api_pos_venta" %}', {
+            const requestFn = window.AppUX?.fetchWithTimeout
+                ? window.AppUX.fetchWithTimeout
+                : (url, opts) => fetch(url, opts);
+
+            const res = await requestFn('{% url "inventario:api_pos_venta" %}', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.csrfToken },
                 body: JSON.stringify({
@@ -443,7 +451,7 @@ const POS = {
                     forma_pago: this.selectedPayment,
                     notas: document.getElementById('venta-notas').value,
                 }),
-            });
+            }, 15000);
             const data = await res.json();
             if (data.ok) {
                 showToast(`✓ Venta ${data.numero} — COP ${this.fmt(parseFloat(data.total))}`, 'success');
@@ -452,10 +460,15 @@ const POS = {
                 showToast(data.error || data.errors?.join(', ') || 'Error', 'error');
             }
         } catch(e) {
-            showToast('Error de conexión', 'error');
+            const isTimeout = e?.name === 'AbortError';
+            showToast(isTimeout ? 'Tiempo de espera agotado. Reintenta.' : 'Error de conexión', 'error');
         } finally {
-            btn.textContent = origText;
-            btn.disabled = !this.cart.length;
+            if (window.AppUX?.endButtonLoading && state) {
+                window.AppUX.endButtonLoading(btn, state, !this.cart.length);
+            } else {
+                btn.textContent = 'Confirmar Venta (F9)';
+                btn.disabled = !this.cart.length;
+            }
         }
     },
 
