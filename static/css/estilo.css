@@ -211,25 +211,6 @@
     border: 0;
 }
 
-.skip-link {
-    position: fixed;
-    top: 0.5rem;
-    left: 0.5rem;
-    z-index: 100;
-    transform: translateY(-200%);
-    background: #0f766e;
-    color: #ffffff;
-    padding: 0.5rem 0.75rem;
-    border-radius: 0.5rem;
-    font-size: 0.875rem;
-    font-weight: 600;
-    transition: transform 0.15s ease;
-}
-
-.skip-link:focus {
-    transform: translateY(0);
-}
-
 a:focus-visible,
 button:focus-visible,
 input:focus-visible,
