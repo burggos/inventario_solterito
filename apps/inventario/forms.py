@@ -1,5 +1,5 @@
 from django import forms
-from .models import Movimiento, Producto, Categoria
+from .models import Movimiento, Producto, Categoria, Proveedor
 
 INPUT_CLS = 'mt-1 block w-full rounded-md border-gray-100 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400'
 
@@ -26,7 +26,7 @@ class ProductoForm(forms.ModelForm):
 
     class Meta:
         model = Producto
-        fields = ['nombre', 'descripcion', 'categoria', 'precio', 'stock_minimo', 'codigo_barras']
+        fields = ['nombre', 'descripcion', 'categoria', 'proveedor', 'precio', 'stock_minimo', 'codigo_barras']
         widgets = {
             'nombre': forms.TextInput(attrs={
                 'class': 'mt-1 block w-full rounded-md border-gray-100 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400',
@@ -38,6 +38,9 @@ class ProductoForm(forms.ModelForm):
                 'placeholder': 'Descripción del producto...'
             }),
             'categoria': forms.Select(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-100 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200'
+            }),
+            'proveedor': forms.Select(attrs={
                 'class': 'mt-1 block w-full rounded-md border-gray-100 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200'
             }),
             'precio': forms.NumberInput(attrs={
@@ -57,6 +60,11 @@ class ProductoForm(forms.ModelForm):
                 'placeholder': 'Ej. 7891234567890'
             }),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['proveedor'].queryset = Proveedor.objects.filter(activo=True).order_by('nombre')
+        self.fields['proveedor'].required = False
 
 class MovimientoForm(forms.ModelForm):
     """Form for manual inventory adjustments only. Sales/purchases go through POS."""
@@ -108,7 +116,7 @@ class ProductoEditForm(forms.ModelForm):
     """Form for EDITING products. Stock is read-only (managed via movements)."""
     class Meta:
         model = Producto
-        fields = ['nombre', 'descripcion', 'categoria', 'precio', 'stock_minimo', 'imagen', 'codigo_barras']
+        fields = ['nombre', 'descripcion', 'categoria', 'proveedor', 'precio', 'stock_minimo', 'imagen', 'codigo_barras']
         widgets = {
             'nombre': forms.TextInput(attrs={
                 'class': 'mt-1 block w-full rounded-md border-gray-100 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400',
@@ -120,6 +128,9 @@ class ProductoEditForm(forms.ModelForm):
                 'placeholder': 'Descripción del producto...'
             }),
             'categoria': forms.Select(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-100 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200'
+            }),
+            'proveedor': forms.Select(attrs={
                 'class': 'mt-1 block w-full rounded-md border-gray-100 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200'
             }),
             'precio': forms.NumberInput(attrs={
@@ -138,6 +149,11 @@ class ProductoEditForm(forms.ModelForm):
                 'class': 'mt-1 block w-full text-sm text-gray-500 dark:text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-teal-800 dark:file:bg-gray-600 dark:file:text-white dark:hover:file:bg-teal-700'
             }),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['proveedor'].queryset = Proveedor.objects.filter(activo=True).order_by('nombre')
+        self.fields['proveedor'].required = False
 
 
 # ============================================================================

@@ -32,7 +32,7 @@ from .forms import (
     CategoriaForm,
 )
 from .permissions import role_required, RoleRequiredMixin, ROLE_ADMIN, ROLE_VENDEDOR, ROLE_BODEGUERO
-from django.db.models import Sum, Count
+from django.db.models import Sum, Count, Q as ModelQ, Case, When, Value, IntegerField
 from django.utils import timezone
 from datetime import timedelta, datetime
 from django.contrib.auth.decorators import permission_required
@@ -100,7 +100,7 @@ def dashboard(request):
 
 @login_required
 def lista_productos(request):
-    productos = Producto.objects.filter(activo=True).select_related('categoria')
+    productos = Producto.objects.filter(activo=True).select_related('categoria', 'proveedor')
     
     # Búsqueda por nombre
     query = request.GET.get('q', '')
@@ -137,7 +137,11 @@ def lista_productos(request):
 
 @login_required
 def detalle_producto(request, pk):
-    producto = get_object_or_404(Producto, pk=pk, activo=True)
+    producto = get_object_or_404(
+        Producto.objects.select_related('categoria', 'proveedor'),
+        pk=pk,
+        activo=True,
+    )
     movimientos = producto.movimientos.all().order_by('-fecha')[:10]  # últimos 10 movimientos
     context = {
         'producto': producto,
@@ -172,6 +176,7 @@ def crear_producto(request):
                 producto.save()
 
                 if stock_inicial > 0:
+                    proveedor_seleccionado = producto.proveedor
                     proveedor_default, _ = Proveedor.objects.get_or_create(
                         nombre='Proveedor Alta Inicial',
                         defaults={
@@ -181,7 +186,7 @@ def crear_producto(request):
                     )
 
                     orden_compra = OrdenCompra.objects.create(
-                        proveedor=proveedor_default,
+                        proveedor=proveedor_seleccionado or proveedor_default,
                         estado='completada',
                         fecha_entrega_real=timezone.now().date(),
                         notas=f'Compra automática por creación del producto "{producto.nombre}"',
@@ -1053,12 +1058,48 @@ def cancelar_venta(request, pk):
 @login_required
 @require_http_methods(["GET"])
 def api_buscar_productos(request):
-    q = request.GET.get('q', '')
+    q = (request.GET.get('q', '') or '').strip()
+
+    productos = Producto.objects.filter(activo=True)
+
+    proveedor_id = request.GET.get('proveedor_id', '')
+    if proveedor_id and proveedor_id.isdigit():
+        proveedor_id_int = int(proveedor_id)
+        productos = productos.filter(
+            ModelQ(proveedor_id=proveedor_id_int)
+            | ModelQ(detallecompra__orden_compra__proveedor_id=proveedor_id_int)
+        ).distinct()
+
+        # Si no hay texto de búsqueda, devolver lista inicial de productos del proveedor.
+        if not q:
+            productos = productos.annotate(
+                veces_comprado=Count(
+                    'detallecompra',
+                    filter=ModelQ(detallecompra__orden_compra__proveedor_id=proveedor_id_int),
+                ),
+                es_proveedor_principal=Case(
+                    When(proveedor_id=proveedor_id_int, then=Value(1)),
+                    default=Value(0),
+                    output_field=IntegerField(),
+                ),
+            ).order_by('-es_proveedor_principal', '-veces_comprado', 'nombre')[:15]
+
+            data = [
+                {
+                    'id': p.id,
+                    'nombre': p.nombre,
+                    'precio': str(p.precio),
+                    'stock': p.stock,
+                    'codigo_barras': p.codigo_barras or '',
+                }
+                for p in productos
+            ]
+            return JsonResponse(data, safe=False)
+
     if len(q) < 2:
         return JsonResponse([], safe=False)
-    productos = Producto.objects.filter(
-        activo=True
-    ).filter(
+
+    productos = productos.filter(
         Q(nombre__icontains=q) | Q(codigo_barras__icontains=q)
     )[:10]
     data = [

@@ -28,6 +28,14 @@ class Producto(models.Model):
         null=True, 
         related_name='productos'
     )
+    proveedor = models.ForeignKey(
+        'Proveedor',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='productos_surtidos',
+        help_text='Proveedor principal que surte este producto',
+    )
     precio = models.DecimalField(max_digits=10, decimal_places=2)
     stock = models.PositiveIntegerField(default=0)
     stock_minimo = models.PositiveIntegerField(default=5, help_text="Cantidad mínima para alertar")
@@ -149,6 +157,9 @@ class Proveedor(models.Model):
         verbose_name = "Proveedor"
         verbose_name_plural = "Proveedores"
         ordering = ['nombre']
+
+    def __str__(self):
+        return self.nombre
 
 
 class Cliente(models.Model):
