@@ -242,6 +242,7 @@ const POS = {
 
     bindEvents() {
         const search = document.getElementById('product-search');
+        const cartBody = document.getElementById('cart-body');
         search.addEventListener('input', () => this.onSearch(search.value));
         search.addEventListener('keydown', e => this.onSearchKey(e));
         search.addEventListener('focus', () => { if (search.value.length >= 2) this.onSearch(search.value); });
@@ -254,6 +255,24 @@ const POS = {
         document.getElementById('cliente-select').addEventListener('change', e => this.onClienteChange(e.target.value));
         document.getElementById('descuento-manual').addEventListener('input', e => this.onManualDiscountChange(e.target.value));
         document.addEventListener('keydown', e => this.onGlobalKey(e));
+        cartBody.addEventListener('click', e => {
+            const actionBtn = e.target.closest('[data-cart-action]');
+            if (!actionBtn) return;
+            const itemId = parseInt(actionBtn.dataset.itemId, 10);
+            const item = this.cart.find(i => i.id === itemId);
+            if (!item) return;
+
+            const action = actionBtn.dataset.cartAction;
+            if (action === 'decrement') this.updateQty(itemId, item.qty - 1);
+            if (action === 'increment') this.updateQty(itemId, item.qty + 1);
+            if (action === 'remove') this.removeItem(itemId);
+        });
+        cartBody.addEventListener('change', e => {
+            const qtyInput = e.target.closest('[data-cart-qty-input]');
+            if (!qtyInput) return;
+            const itemId = parseInt(qtyInput.dataset.itemId, 10);
+            this.updateQty(itemId, qtyInput.value);
+        });
         document.addEventListener('click', e => {
             if (!e.target.closest('#product-search') && !e.target.closest('#search-results')) {
                 this.hideResults();
@@ -464,17 +483,17 @@ const POS = {
                     </td>
                     <td class="px-4 py-2 text-center">
                         <div class="inline-flex items-center border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
-                            <button onclick="POS.updateQty(${i.id}, ${i.qty - 1})" class="px-2.5 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-300 text-sm font-bold">&minus;</button>
+                            <button type="button" data-cart-action="decrement" data-item-id="${i.id}" class="px-2.5 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-300 text-sm font-bold">&minus;</button>
                             <input type="number" value="${i.qty}" min="1" max="${i.stock}"
-                                   onchange="POS.updateQty(${i.id}, this.value)"
+                                   data-cart-qty-input data-item-id="${i.id}"
                                    class="w-10 text-center text-sm border-x border-gray-300 dark:border-gray-600 py-1 bg-transparent dark:text-white focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
-                            <button onclick="POS.updateQty(${i.id}, ${i.qty + 1})" class="px-2.5 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-300 text-sm font-bold">+</button>
+                            <button type="button" data-cart-action="increment" data-item-id="${i.id}" class="px-2.5 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-300 text-sm font-bold">+</button>
                         </div>
                     </td>
                     <td class="px-4 py-2 text-right text-gray-600 dark:text-gray-400 text-sm">COP ${this.fmt(i.precio)}</td>
                     <td class="px-4 py-2 text-right font-semibold text-gray-800 dark:text-white text-sm">COP ${this.fmt(i.precio * i.qty)}</td>
                     <td class="px-2 py-2 text-center">
-                        <button onclick="POS.removeItem(${i.id})" class="text-red-400 hover:text-red-600 transition p-1" title="Quitar">
+                        <button type="button" data-cart-action="remove" data-item-id="${i.id}" class="text-red-400 hover:text-red-600 transition p-1" title="Quitar">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                         </button>
                     </td>

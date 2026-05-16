@@ -132,6 +132,7 @@ const COMPRA = {
 
     bindEvents() {
         const search = document.getElementById('product-search');
+        const cartBody = document.getElementById('cart-body');
         search.addEventListener('input', () => this.onSearch(search.value));
         search.addEventListener('keydown', e => this.onSearchKey(e));
         search.addEventListener('focus', () => { if (search.value.length >= 2) this.onSearch(search.value); });
@@ -141,6 +142,32 @@ const COMPRA = {
         document.getElementById('proveedor-select').addEventListener('change', e => this.onProveedorChange(e.target.value));
         document.getElementById('compra-notas').addEventListener('input', () => this.saveState());
         document.addEventListener('keydown', e => this.onGlobalKey(e));
+        cartBody.addEventListener('click', e => {
+            const actionBtn = e.target.closest('[data-cart-action]');
+            if (!actionBtn) return;
+            const itemId = parseInt(actionBtn.dataset.itemId, 10);
+            const item = this.cart.find(i => i.id === itemId);
+            if (!item) return;
+
+            const action = actionBtn.dataset.cartAction;
+            if (action === 'decrement') this.updateQty(itemId, item.qty - 1);
+            if (action === 'increment') this.updateQty(itemId, item.qty + 1);
+            if (action === 'remove') this.removeItem(itemId);
+        });
+        cartBody.addEventListener('change', e => {
+            const qtyInput = e.target.closest('[data-cart-qty-input]');
+            if (qtyInput) {
+                const itemId = parseInt(qtyInput.dataset.itemId, 10);
+                this.updateQty(itemId, qtyInput.value);
+                return;
+            }
+
+            const priceInput = e.target.closest('[data-cart-price-input]');
+            if (priceInput) {
+                const itemId = parseInt(priceInput.dataset.itemId, 10);
+                this.updatePrice(itemId, priceInput.value);
+            }
+        });
     },
 
     saveState() {
@@ -409,18 +436,18 @@ const COMPRA = {
                     </td>
                     <td class="px-4 py-2 text-center">
                         <div class="inline-flex items-center border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
-                            <button onclick="COMPRA.updateQty(${i.id}, ${i.qty - 1})" class="px-2.5 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-300 text-sm font-bold">&minus;</button>
-                            <input type="number" value="${i.qty}" min="1" onchange="COMPRA.updateQty(${i.id}, this.value)" class="w-10 text-center text-sm border-x border-gray-300 dark:border-gray-600 py-1 bg-transparent dark:text-white focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
-                            <button onclick="COMPRA.updateQty(${i.id}, ${i.qty + 1})" class="px-2.5 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-300 text-sm font-bold">+</button>
+                            <button type="button" data-cart-action="decrement" data-item-id="${i.id}" class="px-2.5 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-300 text-sm font-bold">&minus;</button>
+                            <input type="number" value="${i.qty}" min="1" data-cart-qty-input data-item-id="${i.id}" class="w-10 text-center text-sm border-x border-gray-300 dark:border-gray-600 py-1 bg-transparent dark:text-white focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
+                            <button type="button" data-cart-action="increment" data-item-id="${i.id}" class="px-2.5 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-300 text-sm font-bold">+</button>
                         </div>
                     </td>
                     <td class="px-4 py-2 text-right">
-                        <input type="number" value="${i.precio}" min="0" step="100" onchange="COMPRA.updatePrice(${i.id}, this.value)" class="w-28 text-right text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 bg-transparent dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
+                        <input type="number" value="${i.precio}" min="0" step="100" data-cart-price-input data-item-id="${i.id}" class="w-28 text-right text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 bg-transparent dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
                         ${this.referenceLabel(i.id)}
                     </td>
                     <td class="px-4 py-2 text-right font-semibold text-gray-800 dark:text-white text-sm">COP ${this.fmt(i.precio * i.qty)}</td>
                     <td class="px-2 py-2 text-center">
-                        <button onclick="COMPRA.removeItem(${i.id})" class="text-red-400 hover:text-red-600 transition p-1" title="Quitar">
+                        <button type="button" data-cart-action="remove" data-item-id="${i.id}" class="text-red-400 hover:text-red-600 transition p-1" title="Quitar">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                         </button>
                     </td>
