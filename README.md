@@ -68,6 +68,12 @@ pip install -r requirements.txt
 python manage.py migrate
 ```
 
+Opcional, si quieres cargar datos de ejemplo:
+
+```bash
+python manage.py shell < seed_data.py
+```
+
 5. Crear un superusuario:
 
 ```bash
@@ -128,7 +134,7 @@ inventario_solterito/
 ├── render.yaml                 # Configuración de deployment en Render
 ├── .python-version             # Pin de Python (3.11.9)
 ├── .env.example                # Template de variables de entorno
-├── db.sqlite3                  # Base de datos (desarrollo)
+├── db.sqlite3                  # Base de datos local generada tras migrar
 ├── solterito_inventario/       # Configuración del proyecto Django
 │   ├── settings.py             # Soporta SQLite (dev) y PostgreSQL (prod)
 │   ├── urls.py
@@ -217,7 +223,8 @@ python manage.py test
 ## Notas
 
 - El frontend usa Tailwind CSS desde CDN — no se requiere npm.
-- `db.sqlite3` se incluye como base de datos de desarrollo.
+- `db.sqlite3` es un archivo local de desarrollo: se genera con `python manage.py migrate` y no debe versionarse.
+- Si necesitas una base poblada para demos o pruebas manuales, puedes ejecutar `python manage.py shell < seed_data.py`.
 - Las imágenes de productos se almacenan en `media/productos/`.
 - **Dependencias consolidadas:** Un único `requirements.txt` cubre desarrollo y producción.
 - **Entorno virtual:** Usa `.venv` localmente; `.gitignore` previene versionado accidental.
