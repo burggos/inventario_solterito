@@ -14,30 +14,78 @@
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 border-t-4 border-t-teal-500 dark:border-t-teal-700 p-6">
         <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
-            
-            <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+
+            {% if form.non_field_errors %}
+            <div class="alert-danger mb-4">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+
+            <div class="mb-5 flex items-center gap-2">
+                <div id="wizard-dot-1" class="w-8 h-8 rounded-full bg-teal-600 text-white text-xs font-bold flex items-center justify-center">1</div>
+                <div class="h-0.5 flex-1 bg-gray-200 dark:bg-gray-700"></div>
+                <div id="wizard-dot-2" class="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 text-white text-xs font-bold flex items-center justify-center">2</div>
+            </div>
+
+            <div id="step-1" class="grid grid-cols-1 gap-6 md:grid-cols-2">
                 {% for field in form %}
-                <div class="w-full {% if field.name == 'descripcion' %}md:col-span-2{% endif %}">
-                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        {{ field.label }}{% if field.field.required %} <span class="text-red-500">*</span>{% endif %}
-                    </label>
-                    {% if field.name == 'descripcion' %}
-                    {{ field }}
-                {% else %}
-                    {{ field }}
-                {% endif %}
-                    {% if field.errors %}
-                        <p class="text-red-500 text-sm mt-1">{{ field.errors.0 }}</p>
+                    {% if field.name == 'nombre' or field.name == 'descripcion' or field.name == 'categoria' or field.name == 'proveedor' or field.name == 'codigo_barras' %}
+                    <div class="w-full {% if field.name == 'descripcion' %}md:col-span-2{% endif %}">
+                        <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {{ field.label }}{% if field.field.required %} <span class="text-red-500">*</span>{% endif %}
+                        </label>
+                        {{ field }}
+                        {% if field.name == 'nombre' %}
+                        <div id="similares-warning" class="hidden mt-2 p-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                            <p class="text-xs font-semibold text-amber-800 dark:text-amber-300 mb-1">Posibles productos duplicados:</p>
+                            <ul id="similares-list" class="text-xs text-amber-700 dark:text-amber-300 space-y-1"></ul>
+                        </div>
+                        {% endif %}
+                        {% if field.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ field.errors.0 }}</p>
+                        {% endif %}
+                        {% if field.help_text %}
+                            <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">{{ field.help_text }}</p>
+                        {% endif %}
+                    </div>
                     {% endif %}
-                    {% if field.help_text %}
-                        <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">{{ field.help_text }}</p>
-                    {% endif %}
-                </div>
                 {% endfor %}
             </div>
 
+            <div id="step-2" class="hidden">
+                <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    {% for field in form %}
+                        {% if field.name == 'precio' or field.name == 'stock_minimo' or field.name == 'stock_inicial' %}
+                        <div class="w-full">
+                            <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                {{ field.label }}{% if field.field.required %} <span class="text-red-500">*</span>{% endif %}
+                            </label>
+                            {{ field }}
+                            {% if field.errors %}
+                                <p class="text-red-500 text-sm mt-1">{{ field.errors.0 }}</p>
+                            {% endif %}
+                            {% if field.help_text %}
+                                <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">{{ field.help_text }}</p>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                <div class="mt-6 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30">
+                    <p class="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-2">Resumen</p>
+                    <p class="text-sm text-gray-700 dark:text-gray-300"><span class="font-medium">Producto:</span> <span id="summary-nombre">-</span></p>
+                    <p class="text-sm text-gray-700 dark:text-gray-300"><span class="font-medium">Categoría:</span> <span id="summary-categoria">-</span></p>
+                    <p class="text-sm text-gray-700 dark:text-gray-300"><span class="font-medium">Proveedor:</span> <span id="summary-proveedor">-</span></p>
+                    <p class="text-sm text-gray-700 dark:text-gray-300"><span class="font-medium">Precio:</span> <span id="summary-precio">-</span></p>
+                    <p class="text-sm text-gray-700 dark:text-gray-300"><span class="font-medium">Stock inicial:</span> <span id="summary-stock">-</span></p>
+                </div>
+            </div>
+
             <div class="mt-8 flex flex-col sm:flex-row sm:space-x-3 space-y-3 sm:space-y-0">
-                <button type="submit" class="btn-primary">
+                <button id="btn-prev" type="button" class="btn-secondary hidden">Volver</button>
+                <button id="btn-next" type="button" class="btn-primary">Siguiente</button>
+                <button id="btn-submit" type="submit" class="btn-primary hidden">
                     Guardar producto
                 </button>
                 <a href="{% url 'inventario:lista_productos' %}" class="btn-secondary">
@@ -47,4 +95,90 @@
         </form>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const step1 = document.getElementById('step-1');
+    const step2 = document.getElementById('step-2');
+    const dot1 = document.getElementById('wizard-dot-1');
+    const dot2 = document.getElementById('wizard-dot-2');
+    const btnPrev = document.getElementById('btn-prev');
+    const btnNext = document.getElementById('btn-next');
+    const btnSubmit = document.getElementById('btn-submit');
+
+    const inputNombre = document.querySelector('[name="nombre"]');
+    const inputPrecio = document.querySelector('[name="precio"]');
+    const inputStockInicial = document.querySelector('[name="stock_inicial"]');
+    const selectCategoria = document.querySelector('[name="categoria"]');
+    const selectProveedor = document.querySelector('[name="proveedor"]');
+
+    const similaresWarning = document.getElementById('similares-warning');
+    const similaresList = document.getElementById('similares-list');
+
+    function setStep(step) {
+        const inStep1 = step === 1;
+        step1.classList.toggle('hidden', !inStep1);
+        step2.classList.toggle('hidden', inStep1);
+        btnPrev.classList.toggle('hidden', inStep1);
+        btnNext.classList.toggle('hidden', !inStep1);
+        btnSubmit.classList.toggle('hidden', inStep1);
+
+        dot1.className = inStep1
+            ? 'w-8 h-8 rounded-full bg-teal-600 text-white text-xs font-bold flex items-center justify-center'
+            : 'w-8 h-8 rounded-full bg-teal-600 text-white text-xs font-bold flex items-center justify-center';
+        dot2.className = inStep1
+            ? 'w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 text-white text-xs font-bold flex items-center justify-center'
+            : 'w-8 h-8 rounded-full bg-teal-600 text-white text-xs font-bold flex items-center justify-center';
+    }
+
+    function updateSummary() {
+        document.getElementById('summary-nombre').textContent = inputNombre?.value || '-';
+        document.getElementById('summary-categoria').textContent = selectCategoria?.selectedOptions?.[0]?.textContent || '-';
+        document.getElementById('summary-proveedor').textContent = selectProveedor?.selectedOptions?.[0]?.textContent || '-';
+        document.getElementById('summary-precio').textContent = inputPrecio?.value ? `COP ${Number(inputPrecio.value || 0).toLocaleString('es-CO')}` : '-';
+        document.getElementById('summary-stock').textContent = inputStockInicial?.value || '0';
+    }
+
+    btnNext.addEventListener('click', () => {
+        if (!inputNombre?.value?.trim()) {
+            inputNombre?.focus();
+            return;
+        }
+        updateSummary();
+        setStep(2);
+    });
+
+    btnPrev.addEventListener('click', () => setStep(1));
+
+    let timer = null;
+    inputNombre?.addEventListener('input', () => {
+        clearTimeout(timer);
+        const nombre = inputNombre.value.trim();
+        if (nombre.length < 3) {
+            similaresWarning.classList.add('hidden');
+            return;
+        }
+
+        timer = setTimeout(async () => {
+            try {
+                const res = await fetch(`{% url 'inventario:api_productos_similares' %}?nombre=${encodeURIComponent(nombre)}`);
+                const data = await res.json();
+                if (!Array.isArray(data) || !data.length) {
+                    similaresWarning.classList.add('hidden');
+                    return;
+                }
+
+                similaresList.innerHTML = data
+                    .map(p => `<li>${p.nombre}${p.categoria ? ` - ${p.categoria}` : ''}</li>`)
+                    .join('');
+                similaresWarning.classList.remove('hidden');
+            } catch (e) {
+                similaresWarning.classList.add('hidden');
+            }
+        }, 250);
+    });
+
+    setStep(1);
+});
+</script>
 {% endblock %}

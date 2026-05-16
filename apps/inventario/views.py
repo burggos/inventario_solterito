@@ -1178,6 +1178,39 @@ def api_producto_precio_referencia(request, pk):
     return JsonResponse(payload)
 
 
+@login_required
+@role_required(ROLE_ADMIN, ROLE_BODEGUERO)
+@require_http_methods(["GET"])
+def api_productos_similares(request):
+    """Sugerencias de productos parecidos por nombre para evitar duplicados."""
+    nombre = (request.GET.get('nombre', '') or '').strip()
+    if len(nombre) < 3:
+        return JsonResponse([], safe=False)
+
+    filtros = Q(nombre__icontains=nombre)
+    for token in [t for t in nombre.split() if len(t) >= 3]:
+        filtros |= Q(nombre__icontains=token)
+
+    productos = (
+        Producto.objects.filter(activo=True)
+        .filter(filtros)
+        .exclude(nombre__iexact=nombre)
+        .select_related('categoria')
+        .order_by('nombre')[:5]
+    )
+
+    data = [
+        {
+            'id': p.id,
+            'nombre': p.nombre,
+            'categoria': p.categoria.nombre if p.categoria else '',
+            'precio': str(p.precio),
+        }
+        for p in productos
+    ]
+    return JsonResponse(data, safe=False)
+
+
 # ============================================================================
 # POS - VENTA RÁPIDA
 # ============================================================================
