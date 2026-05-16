@@ -29,6 +29,7 @@ from .forms import (
     DetalleCompraForm,
     VentaForm,
     DetalleVentaForm,
+    CategoriaForm,
 )
 from .permissions import role_required, RoleRequiredMixin, ROLE_ADMIN, ROLE_VENDEDOR, ROLE_BODEGUERO
 from django.db.models import Sum, Count
@@ -143,6 +144,19 @@ def detalle_producto(request, pk):
     }
     return render(request, 'inventario/detalle_producto.html', context)
 
+
+@login_required
+@role_required(ROLE_ADMIN, ROLE_BODEGUERO)
+def crear_categoria(request):
+    if request.method == 'POST':
+        form = CategoriaForm(request.POST)
+        if form.is_valid():
+            categoria = form.save()
+            messages.success(request, f'Categoría "{categoria.nombre}" creada correctamente.')
+            return redirect('inventario:lista_productos')
+    else:
+        form = CategoriaForm()
+    return render(request, 'inventario/crear_categoria.html', {'form': form})
 
 @login_required
 @role_required(ROLE_ADMIN, ROLE_BODEGUERO)

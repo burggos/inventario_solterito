@@ -1,5 +1,16 @@
 from django import forms
-from .models import Movimiento, Producto
+from .models import Movimiento, Producto, Categoria
+
+INPUT_CLS = 'mt-1 block w-full rounded-md border-gray-100 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400'
+
+class CategoriaForm(forms.ModelForm):
+    class Meta:
+        model = Categoria
+        fields = ['nombre', 'descripcion']
+        widgets = {
+            'nombre': forms.TextInput(attrs={'class': INPUT_CLS, 'placeholder': 'Ej: Lácteos, Bebidas...'}),
+            'descripcion': forms.Textarea(attrs={'class': INPUT_CLS, 'rows': 3, 'placeholder': 'Descripción opcional...'}),
+        }
 
 class ProductoForm(forms.ModelForm):
     """Form for CREATING products. Includes stock_inicial which routes through Movimiento."""

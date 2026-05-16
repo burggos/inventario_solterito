@@ -10,10 +10,16 @@
         <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Inventario de Productos</h2>
         <p class="text-gray-500 dark:text-gray-400 mt-1">Gestiona y consulta tu inventario</p>
     </div>
-    <a href="{% url 'inventario:crear_producto' %}" class="btn-primary">
-        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-        Nuevo Producto
-    </a>
+    <div class="flex gap-2">
+        <a href="{% url 'inventario:crear_categoria' %}" class="btn-outline">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5a2 2 0 011.41.59l7 7a2 2 0 010 2.82l-5 5a2 2 0 01-2.82 0l-7-7A2 2 0 013 10V5a2 2 0 012-2z"/></svg>
+            Nueva Categoría
+        </a>
+        <a href="{% url 'inventario:crear_producto' %}" class="btn-primary">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Nuevo Producto
+        </a>
+    </div>
 </div>
 
 <!-- Filters -->
