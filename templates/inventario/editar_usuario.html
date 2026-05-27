@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Editar Usuario - El Solterito{% endblock %}
+{% block page_title %}Editar Usuario{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto">
+    {% include 'includes/page_header.html' with title='Editar Usuario' subtitle=usuario.username %}
+
+    <div class="card p-6">
+        <form method="post" novalidate>
+            {% csrf_token %}
+            {% if form.errors %}
+            <div class="alert-danger mb-6">
+                <p class="font-semibold text-sm">Por favor corrige los errores:</p>
+                {% if form.non_field_errors %}
+                <ul class="mt-1 text-sm list-disc list-inside">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <div class="space-y-4">
+                <!-- Nombre / Apellido -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ form.first_name.label }}</label>
+                        {{ form.first_name }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ form.last_name.label }}</label>
+                        {{ form.last_name }}
+                    </div>
+                </div>
+
+                <!-- Rol -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        {{ form.rol.label }} <span class="text-red-500">*</span>
+                    </label>
+                    {{ form.rol }}
+                    {% if form.rol.errors %}<p class="mt-1 text-xs text-red-500">{{ form.rol.errors.0 }}</p>{% endif %}
+                </div>
+
+                <!-- Estado activo -->
+                <div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                    {{ form.is_active }}
+                    <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ form.is_active.label }}</label>
+                </div>
+
+                <!-- Nueva contraseña (opcional) -->
+                <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Cambio de contraseña — dejar en blanco para no modificarla.</p>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ form.password1.label }}</label>
+                            {{ form.password1 }}
+                            {% if form.password1.errors %}<p class="mt-1 text-xs text-red-500">{{ form.password1.errors.0 }}</p>{% endif %}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ form.password2.label }}</label>
+                            {{ form.password2 }}
+                            {% if form.password2.errors %}<p class="mt-1 text-xs text-red-500">{{ form.password2.errors.0 }}</p>{% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8 flex flex-col sm:flex-row sm:space-x-3 space-y-3 sm:space-y-0">
+                <button type="submit" class="btn-primary">Guardar cambios</button>
+                <a href="{% url 'inventario:lista_usuarios' %}" class="btn-secondary">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

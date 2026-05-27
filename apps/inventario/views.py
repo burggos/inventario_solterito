@@ -261,15 +261,16 @@ def crear_producto(request):
                         usuario_creador=request.user.username,
                     )
 
+                    precio_compra_ref = producto.precio_compra if producto.precio_compra is not None else producto.precio
                     DetalleCompra.objects.create(
                         orden_compra=orden_compra,
                         producto=producto,
                         cantidad_solicitada=stock_inicial,
                         cantidad_recibida=stock_inicial,
-                        precio_unitario=producto.precio,
+                        precio_unitario=precio_compra_ref,
                     )
 
-                    orden_compra.total = producto.precio * stock_inicial
+                    orden_compra.total = precio_compra_ref * stock_inicial
                     orden_compra.save(update_fields=['total'])
 
                     Movimiento.objects.create(
@@ -495,12 +496,9 @@ def reportes(request):
     if filtro_categoria and filtro_categoria.isdigit():
         detalle_venta_q &= Q(producto__categoria_id=int(filtro_categoria))
 
-    producto_mas_vendido_qs = DetalleVenta.objects.filter(detalle_venta_q).values(
-        'producto__nombre', 'producto__pk'
-    ).annotate(
-        total_qty=Sum('cantidad')
-    ).order_by('-total_qty').first()
-    producto_mas_vendido = producto_mas_vendido_qs['producto__nombre'] if producto_mas_vendido_qs else 'N/A'
+    # Producto más vendido y top productos se calculan junto al chart (ver sección gráficos)
+    producto_mas_vendido = 'N/A'
+    producto_mas_vendido_top_qty = 0
 
     # Cliente más frecuente
     cliente_top_qs = ventas_completadas.values('cliente_nombre').annotate(
@@ -514,9 +512,15 @@ def reportes(request):
     stock_promedio = Producto.objects.filter(activo=True).aggregate(avg=Avg('stock'))['avg'] or 1
     rotacion_inventario = round(total_salidas_qty / max(stock_promedio, 1), 2)
 
-    # Margen estimado: ingresos (ventas) - costos (compras completadas)
+    # Costo de compras en el período (para KPI secundario y gráfico Ventas vs Compras)
     costos_compras = compras_periodo.filter(estado='completada').aggregate(t=Sum('total'))['t'] or Decimal('0')
-    margen_estimado = ingresos_totales - costos_compras
+    # Margen bruto real: suma(subtotal_venta - precio_compra * cantidad) por línea de venta
+    # Más preciso que ingresos - compras_período porque usa COGS real de cada producto vendido
+    margen_estimado = DetalleVenta.objects.filter(detalle_venta_q).annotate(
+        costo_unitario=Coalesce(F('producto__precio_compra'), F('producto__precio'))
+    ).aggregate(
+        total=Sum(F('subtotal') - F('costo_unitario') * F('cantidad'))
+    )['total'] or Decimal('0')
     margen_porcentaje = round((margen_estimado / ingresos_totales * 100), 1) if ingresos_totales > 0 else Decimal('0')
 
     # ── Movimientos del rango ──
@@ -603,35 +607,40 @@ def reportes(request):
         'qty': item['qty'] or 0
     } for item in cat_dist], cls=DjangoJSONEncoder)
 
-    # Chart 5: Top 5 productos más vendidos (barras horizontales)
-    top_productos_qs = DetalleVenta.objects.filter(detalle_venta_q).values(
+    # Chart 5 + KPI + tabla: una sola query DetalleVenta para gráfico, KPI y tabla (fuente unificada)
+    top_productos_data = list(DetalleVenta.objects.filter(detalle_venta_q).values(
         'producto__nombre', 'producto__pk'
     ).annotate(
         total_qty=Sum('cantidad'), total_revenue=Sum('subtotal')
-    ).order_by('-total_qty')[:5]
+    ).order_by('-total_qty')[:10])
+
+    # KPI: producto más vendido por cantidad
+    if top_productos_data:
+        producto_mas_vendido = top_productos_data[0]['producto__nombre']
+        producto_mas_vendido_top_qty = top_productos_data[0]['total_qty'] or 0
+
+    # Chart: top 5 por cantidad (ingresos en tooltip)
     top_productos_chart_json = json.dumps([{
         'nombre': item['producto__nombre'],
         'cantidad': item['total_qty'] or 0,
         'revenue': float(item['total_revenue'] or 0)
-    } for item in top_productos_qs], cls=DjangoJSONEncoder)
+    } for item in top_productos_data[:5]], cls=DjangoJSONEncoder)
 
-    # Also keep list version for table
-    productos_mas_vendidos_qs = Producto.objects.filter(
-        activo=True,
-        movimientos__tipo='salida'
-    ).annotate(
-        total_vendido=Sum(
-            'movimientos__cantidad',
-            filter=Q(movimientos__tipo='salida', movimientos__fecha__date__gte=rango_desde, movimientos__fecha__date__lte=rango_hasta)
-        )
-    ).filter(total_vendido__gt=0).order_by('-total_vendido')[:10]
-    productos_mas_vendidos = list(productos_mas_vendidos_qs)
-    max_vendido = max((p.total_vendido or 0 for p in productos_mas_vendidos), default=1)
-    for producto in productos_mas_vendidos:
-        producto.porcentaje_vendido = int((producto.total_vendido or 0) / max_vendido * 100) if max_vendido else 0
+    # Tabla: misma fuente que el gráfico — consistencia garantizada, sin ajustes manuales
+    _top_pks = [item['producto__pk'] for item in top_productos_data]
+    _qty_map = {item['producto__pk']: (item['total_qty'] or 0) for item in top_productos_data}
+    _max_qty = max(_qty_map.values(), default=1)
+    _prods_map = {p.pk: p for p in Producto.objects.filter(pk__in=_top_pks).select_related('categoria')}
+    productos_mas_vendidos = []
+    for item in top_productos_data:
+        p = _prods_map.get(item['producto__pk'])
+        if p:
+            p.total_vendido = _qty_map[p.pk]
+            p.porcentaje_vendido = int(p.total_vendido / _max_qty * 100) if _max_qty else 0
+            productos_mas_vendidos.append(p)
 
     # ── Tablas analíticas ──
-    # Productos con menor rotación (con al menos 1 movimiento, pero pocas salidas)
+    # Baja rotación: productos CON ventas pero pocas (cero-ventas van a Capital Muerto, sin superposición)
     productos_baja_rotacion = Producto.objects.filter(
         activo=True, stock__gt=0
     ).annotate(
@@ -639,13 +648,15 @@ def reportes(request):
             'movimientos__cantidad',
             filter=Q(movimientos__tipo='salida', movimientos__fecha__date__gte=rango_desde, movimientos__fecha__date__lte=rango_hasta)
         ), 0)
-    ).order_by('total_salidas')[:5]
+    ).filter(total_salidas__gt=0).order_by('total_salidas')[:5]
 
-    # Productos sin movimiento en el período
-    productos_sin_movimiento = Producto.objects.filter(activo=True).exclude(
+    # Productos sin movimiento en el período (count para insight, slice para tabla)
+    _sin_movimiento_qs = Producto.objects.filter(activo=True).exclude(
         movimientos__fecha__date__gte=rango_desde,
         movimientos__fecha__date__lte=rango_hasta
-    ).order_by('-stock')[:10]
+    )
+    sin_movimiento_total = _sin_movimiento_qs.count()
+    productos_sin_movimiento = _sin_movimiento_qs.order_by('-stock')[:10]
 
     # Clientes destacados
     clientes_destacados = ventas_completadas.values('cliente_nombre').annotate(
@@ -653,9 +664,6 @@ def reportes(request):
         total_gastado=Sum('total'),
         ticket_avg=Avg('total')
     ).order_by('-total_gastado')[:5]
-
-    # Ventas recientes
-    ventas_recientes = Venta.objects.select_related().order_by('-fecha_venta')[:5]
 
     # ── Insights automáticos ──
     insights = []
@@ -671,47 +679,52 @@ def reportes(request):
     prev_ingresos = Venta.objects.filter(prev_ventas_q).aggregate(t=Sum('total'))['t'] or Decimal('0')
     prev_ventas_count = Venta.objects.filter(prev_ventas_q).count()
 
+    # KPI comparativos calculados una sola vez — reutilizados en insights y en el template
+    cambio_ingresos_pct = Decimal('0')
     if prev_ingresos > 0:
-        cambio_ingresos = round(((ingresos_totales - prev_ingresos) / prev_ingresos) * 100, 1)
-        if cambio_ingresos > 0:
-            insights.append({
-                'tipo': 'success',
-                'icono': 'trending-up',
-                'texto': f'Los ingresos aumentaron un {cambio_ingresos}% respecto al período anterior'
-            })
-        elif cambio_ingresos < 0:
-            insights.append({
-                'tipo': 'danger',
-                'icono': 'trending-down',
-                'texto': f'Los ingresos disminuyeron un {abs(cambio_ingresos)}% respecto al período anterior'
-            })
-        else:
-            insights.append({
-                'tipo': 'info',
-                'icono': 'minus',
-                'texto': 'Los ingresos se mantuvieron igual que el período anterior'
-            })
+        cambio_ingresos_pct = round(((ingresos_totales - prev_ingresos) / prev_ingresos) * 100, 1)
 
+    cambio_ventas_pct = Decimal('0')
     if prev_ventas_count > 0:
-        cambio_ventas = round(((total_ventas_count - prev_ventas_count) / prev_ventas_count) * 100, 1)
-        if cambio_ventas > 0:
-            insights.append({
-                'tipo': 'success',
-                'icono': 'shopping-cart',
-                'texto': f'Las ventas aumentaron un {cambio_ventas}% ({total_ventas_count} vs {prev_ventas_count})'
-            })
-        elif cambio_ventas < 0:
-            insights.append({
-                'tipo': 'danger',
-                'icono': 'shopping-cart',
-                'texto': f'Las ventas cayeron un {abs(cambio_ventas)}% ({total_ventas_count} vs {prev_ventas_count})'
-            })
+        cambio_ventas_pct = round(((total_ventas_count - prev_ventas_count) / prev_ventas_count) * 100, 1)
 
-    if producto_mas_vendido_qs:
+    if cambio_ingresos_pct > 0:
+        insights.append({
+            'tipo': 'success',
+            'icono': 'trending-up',
+            'texto': f'Los ingresos aumentaron un {cambio_ingresos_pct}% respecto al período anterior'
+        })
+    elif cambio_ingresos_pct < 0:
+        insights.append({
+            'tipo': 'danger',
+            'icono': 'trending-down',
+            'texto': f'Los ingresos disminuyeron un {abs(cambio_ingresos_pct)}% respecto al período anterior'
+        })
+    elif prev_ingresos > 0:
+        insights.append({
+            'tipo': 'info',
+            'icono': 'minus',
+            'texto': 'Los ingresos se mantuvieron igual que el período anterior'
+        })
+
+    if cambio_ventas_pct > 0:
+        insights.append({
+            'tipo': 'success',
+            'icono': 'shopping-cart',
+            'texto': f'Las ventas aumentaron un {cambio_ventas_pct}% ({total_ventas_count} vs {prev_ventas_count})'
+        })
+    elif cambio_ventas_pct < 0:
+        insights.append({
+            'tipo': 'danger',
+            'icono': 'shopping-cart',
+            'texto': f'Las ventas cayeron un {abs(cambio_ventas_pct)}% ({total_ventas_count} vs {prev_ventas_count})'
+        })
+
+    if top_productos_data:
         insights.append({
             'tipo': 'info',
             'icono': 'star',
-            'texto': f'El producto más vendido es "{producto_mas_vendido}" con {producto_mas_vendido_qs["total_qty"]} unidades'
+            'texto': f'El producto más vendido es "{producto_mas_vendido}" con {producto_mas_vendido_top_qty} unidades'
         })
 
     if productos_stock_bajo > 0:
@@ -746,26 +759,13 @@ def reportes(request):
             'texto': f'La forma de pago más utilizada es "{pago_labels.get(forma_pago_top["forma_pago"], forma_pago_top["forma_pago"])}" ({forma_pago_top["cnt"]} ventas)'
         })
 
-    # Productos sin movimiento
-    sin_movimiento_count = Producto.objects.filter(activo=True).exclude(
-        movimientos__fecha__date__gte=rango_desde,
-        movimientos__fecha__date__lte=rango_hasta
-    ).count()
-    if sin_movimiento_count > 0:
+    # Productos sin movimiento (reutiliza el conteo ya calculado, sin query extra)
+    if sin_movimiento_total > 0:
         insights.append({
             'tipo': 'warning',
             'icono': 'package',
-            'texto': f'Hay {sin_movimiento_count} producto(s) sin movimiento en el período (capital muerto)'
+            'texto': f'Hay {sin_movimiento_total} producto(s) sin ningún movimiento en el período'
         })
-
-    # ── KPI comparison values for template ──
-    cambio_ingresos_pct = Decimal('0')
-    if prev_ingresos > 0:
-        cambio_ingresos_pct = round(((ingresos_totales - prev_ingresos) / prev_ingresos) * 100, 1)
-
-    cambio_ventas_pct = Decimal('0')
-    if prev_ventas_count > 0:
-        cambio_ventas_pct = round(((total_ventas_count - prev_ventas_count) / prev_ventas_count) * 100, 1)
 
     prev_ticket = Venta.objects.filter(prev_ventas_q).aggregate(avg=Avg('total'))['avg'] or Decimal('0')
     cambio_ticket_pct = Decimal('0')
@@ -779,14 +779,10 @@ def reportes(request):
     total_stock_actual = Producto.objects.filter(activo=True).aggregate(t=Sum('stock'))['t'] or 0
     dias_inventario = round(Decimal(str(total_stock_actual)) / avg_daily_sales, 1) if avg_daily_sales > 0 else Decimal('0')
 
-    # Top producto por ingresos (no por cantidad)
-    top_producto_ingresos_qs = DetalleVenta.objects.filter(detalle_venta_q).values(
-        'producto__nombre'
-    ).annotate(
-        total_revenue=Sum('subtotal')
-    ).order_by('-total_revenue').first()
-    top_producto_ingresos = top_producto_ingresos_qs['producto__nombre'] if top_producto_ingresos_qs else 'N/A'
-    top_producto_ingresos_val = float(top_producto_ingresos_qs['total_revenue'] or 0) if top_producto_ingresos_qs else 0
+    # Top producto por ingresos — derivado de top_productos_data (sin query adicional)
+    _top_by_revenue = max(top_productos_data, key=lambda x: x['total_revenue'] or 0, default=None)
+    top_producto_ingresos = _top_by_revenue['producto__nombre'] if _top_by_revenue else 'N/A'
+    top_producto_ingresos_val = float(_top_by_revenue['total_revenue'] or 0) if _top_by_revenue else 0
     top_producto_ingresos_pct = round(top_producto_ingresos_val / float(ingresos_totales) * 100, 1) if ingresos_totales > 0 else 0
 
     # Categorías ranking con porcentajes
@@ -809,7 +805,7 @@ def reportes(request):
             'movimientos__cantidad',
             filter=Q(movimientos__tipo='salida', movimientos__fecha__date__gte=rango_desde, movimientos__fecha__date__lte=rango_hasta)
         ), 0),
-        valor_retenido=F('precio') * F('stock')
+        valor_retenido=Coalesce(F('precio_compra'), F('precio')) * F('stock')
     ).filter(total_salidas=0).order_by('-valor_retenido')[:10]
 
     # Rotación chart: Top productos vendidos vs stock actual
@@ -1255,6 +1251,8 @@ def api_buscar_productos(request):
                     'id': p.id,
                     'nombre': p.nombre,
                     'precio': str(p.precio),
+                    'precio_compra': str(p.precio_compra) if p.precio_compra is not None else None,
+                    'precio_venta': str(p.precio_venta) if p.precio_venta is not None else None,
                     'stock': p.stock,
                     'codigo_barras': p.codigo_barras or '',
                 }
@@ -1273,6 +1271,8 @@ def api_buscar_productos(request):
             'id': p.id,
             'nombre': p.nombre,
             'precio': str(p.precio),
+            'precio_compra': str(p.precio_compra) if p.precio_compra is not None else None,
+            'precio_venta': str(p.precio_venta) if p.precio_venta is not None else None,
             'stock': p.stock,
             'codigo_barras': p.codigo_barras or '',
         }
@@ -1289,6 +1289,8 @@ def api_producto_detalle(request, pk):
         'id': producto.id,
         'nombre': producto.nombre,
         'precio': str(producto.precio),
+        'precio_compra': str(producto.precio_compra) if producto.precio_compra is not None else None,
+        'precio_venta': str(producto.precio_venta) if producto.precio_venta is not None else None,
         'stock': producto.stock,
         'codigo_barras': producto.codigo_barras or '',
     })
@@ -1403,7 +1405,9 @@ def compra_rapida(request):
             producto_inicial = {
                 'id': producto.id,
                 'nombre': producto.nombre,
-                'precio': str(producto.precio),
+                'precio': str(producto.precio_compra) if producto.precio_compra is not None else str(producto.precio),
+                'precio_compra': str(producto.precio_compra) if producto.precio_compra is not None else None,
+                'precio_venta': str(producto.precio_venta) if producto.precio_venta is not None else None,
                 'stock': producto.stock,
                 'codigo_barras': producto.codigo_barras or '',
                 'proveedor_id': producto.proveedor_id or '',
@@ -1481,7 +1485,7 @@ def api_pos_venta(request):
                 validated.append({
                     'producto': producto,
                     'cantidad': cantidad,
-                    'precio': Decimal(str(item.get('precio', str(producto.precio)))),
+                    'precio': Decimal(str(item.get('precio', str(producto.precio_venta if producto.precio_venta is not None else producto.precio)))),
                 })
 
             cliente_obj = None
@@ -1624,7 +1628,8 @@ def api_pos_compra(request):
             for item in items:
                 producto = Producto.objects.get(pk=item['producto_id'], activo=True)
                 cantidad = int(item['cantidad'])
-                precio = Decimal(str(item.get('precio', str(producto.precio))))
+                precio_ref_compra = producto.precio_compra if producto.precio_compra is not None else producto.precio
+                precio = Decimal(str(item.get('precio', str(precio_ref_compra))))
                 if cantidad <= 0:
                     return JsonResponse({
                         'ok': False,
@@ -2096,3 +2101,223 @@ def compras_pdf_lista(request):
     response = HttpResponse(pdf, content_type='application/pdf')
     response['Content-Disposition'] = 'inline; filename="compras_registro.pdf"'
     return response
+
+
+@login_required
+@role_required(ROLE_ADMIN, ROLE_BODEGUERO)
+@require_http_methods(["POST"])
+def api_ajuste_inventario(request):
+    """AJAX endpoint para ajuste masivo de inventario por conteo físico."""
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'ok': False, 'error': 'Payload inválido'}, status=400)
+
+    items = body.get('items', [])
+    motivo = body.get('motivo', '').strip()
+
+    if not items:
+        return JsonResponse({'ok': False, 'error': 'No hay productos para ajustar'})
+    if not motivo:
+        return JsonResponse({'ok': False, 'error': 'El motivo del ajuste es obligatorio'})
+    if len(items) > 100:
+        return JsonResponse({'ok': False, 'error': 'Máximo 100 productos por ajuste'}, status=400)
+
+    ajustados = []
+    try:
+        with transaction.atomic():
+            for item in items:
+                producto_id = int(item['producto_id'])
+                delta = int(item['delta'])
+                producto = Producto.objects.select_for_update().get(pk=producto_id)
+                nuevo_stock = producto.stock + delta
+                mov = Movimiento(
+                    producto=producto,
+                    tipo='ajuste',
+                    cantidad=nuevo_stock,
+                    descripcion=motivo,
+                    usuario=request.user.username,
+                )
+                mov.save()
+                producto.refresh_from_db(fields=['stock'])
+                ajustados.append({'nombre': producto.nombre, 'nuevo_stock': producto.stock})
+    except Producto.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Producto no encontrado'}, status=404)
+    except (KeyError, ValueError) as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=400)
+
+    logger.info('ajuste_inventario user=%s items=%d', request.user.username, len(ajustados))
+    return JsonResponse({'ok': True, 'ajustados': len(ajustados)})
+
+
+# ---------------------------------------------------------------------------
+# Gestión de usuarios (solo Administrador)
+# ---------------------------------------------------------------------------
+
+@login_required
+@role_required(ROLE_ADMIN)
+def lista_usuarios(request):
+    from django.contrib.auth.models import User
+    usuarios = User.objects.prefetch_related('groups').order_by('username')
+    return render(request, 'inventario/lista_usuarios.html', {'usuarios': usuarios})
+
+
+@login_required
+@role_required(ROLE_ADMIN)
+def crear_usuario(request):
+    from django.contrib.auth.models import User, Group
+    from .forms import CrearUsuarioForm
+    if request.method == 'POST':
+        form = CrearUsuarioForm(request.POST)
+        if form.is_valid():
+            user = User.objects.create_user(
+                username=form.cleaned_data['username'],
+                password=form.cleaned_data['password1'],
+                first_name=form.cleaned_data.get('first_name', ''),
+                last_name=form.cleaned_data.get('last_name', ''),
+            )
+            try:
+                group = Group.objects.get(name=form.cleaned_data['rol'])
+                user.groups.add(group)
+            except Group.DoesNotExist:
+                pass
+            messages.success(request, f'Usuario "{user.username}" creado correctamente.')
+            return redirect('inventario:lista_usuarios')
+    else:
+        form = CrearUsuarioForm()
+    return render(request, 'inventario/crear_usuario.html', {'form': form})
+
+
+@login_required
+@role_required(ROLE_ADMIN)
+def editar_usuario(request, pk):
+    from django.contrib.auth.models import User, Group
+    from .forms import EditarUsuarioForm
+    usuario = get_object_or_404(User, pk=pk)
+    if usuario.is_superuser:
+        messages.error(request, 'No se puede editar un superusuario desde aquí.')
+        return redirect('inventario:lista_usuarios')
+    if request.method == 'POST':
+        form = EditarUsuarioForm(request.POST)
+        if form.is_valid():
+            usuario.first_name = form.cleaned_data.get('first_name', '')
+            usuario.last_name = form.cleaned_data.get('last_name', '')
+            usuario.is_active = form.cleaned_data.get('is_active', True)
+            new_pass = form.cleaned_data.get('password1')
+            if new_pass:
+                usuario.set_password(new_pass)
+            usuario.save()
+            usuario.groups.clear()
+            try:
+                group = Group.objects.get(name=form.cleaned_data['rol'])
+                usuario.groups.add(group)
+            except Group.DoesNotExist:
+                pass
+            messages.success(request, f'Usuario "{usuario.username}" actualizado.')
+            return redirect('inventario:lista_usuarios')
+    else:
+        current_rol = usuario.groups.first().name if usuario.groups.exists() else 'Vendedor'
+        form = EditarUsuarioForm(initial={
+            'first_name': usuario.first_name,
+            'last_name': usuario.last_name,
+            'rol': current_rol,
+            'is_active': usuario.is_active,
+        })
+    return render(request, 'inventario/editar_usuario.html', {'form': form, 'usuario': usuario})
+
+
+# ---------------------------------------------------------------------------
+# Gestión de roles (solo Administrador)
+# ---------------------------------------------------------------------------
+
+@login_required
+@role_required(ROLE_ADMIN)
+def lista_roles(request):
+    from django.contrib.auth.models import Group
+    from django.db.models import Count, Prefetch
+    from django.contrib.auth.models import User
+    roles = (
+        Group.objects
+        .prefetch_related(Prefetch('user_set', queryset=User.objects.order_by('username')))
+        .annotate(num_usuarios=Count('user'))
+        .order_by('name')
+    )
+    return render(request, 'inventario/lista_roles.html', {'roles': roles})
+
+
+@login_required
+@role_required(ROLE_ADMIN)
+def crear_rol(request):
+    from django.contrib.auth.models import Group
+    from django.contrib.auth.models import Permission
+    from .forms import RolForm, MODULOS
+    if request.method == 'POST':
+        form = RolForm(request.POST)
+        if form.is_valid():
+            group = Group.objects.create(name=form.cleaned_data['nombre'])
+            codenames = form.cleaned_data.get('modulos', [])
+            perms = Permission.objects.filter(
+                content_type__app_label='inventario',
+                codename__in=codenames,
+            )
+            group.permissions.set(perms)
+            messages.success(request, f'Rol "{group.name}" creado correctamente.')
+            return redirect('inventario:lista_roles')
+    else:
+        form = RolForm()
+    return render(request, 'inventario/crear_rol.html', {'form': form, 'modulos': MODULOS})
+
+
+@login_required
+@role_required(ROLE_ADMIN)
+def editar_rol(request, pk):
+    from django.contrib.auth.models import Group
+    from django.contrib.auth.models import Permission
+    from .forms import RolForm, MODULOS
+    rol = get_object_or_404(Group, pk=pk)
+    modulo_codenames = [m[0] for m in MODULOS]
+    if request.method == 'POST':
+        form = RolForm(request.POST, group_instance=rol)
+        if form.is_valid():
+            rol.name = form.cleaned_data['nombre']
+            rol.save()
+            # Actualizar solo los permisos de módulo (sin tocar los demás)
+            codenames = form.cleaned_data.get('modulos', [])
+            perms_modulo = Permission.objects.filter(
+                content_type__app_label='inventario',
+                codename__in=modulo_codenames,
+            )
+            perms_a_asignar = Permission.objects.filter(
+                content_type__app_label='inventario',
+                codename__in=codenames,
+            )
+            # Quitar los de módulo actuales y poner los seleccionados
+            for p in perms_modulo:
+                rol.permissions.remove(p)
+            for p in perms_a_asignar:
+                rol.permissions.add(p)
+            messages.success(request, f'Rol "{rol.name}" actualizado.')
+            return redirect('inventario:lista_roles')
+    else:
+        # Pre-marcar los módulos que ya tiene el rol
+        current = list(
+            rol.permissions.filter(
+                content_type__app_label='inventario',
+                codename__in=modulo_codenames,
+            ).values_list('codename', flat=True)
+        )
+        form = RolForm(initial={'nombre': rol.name, 'modulos': current}, group_instance=rol)
+    return render(request, 'inventario/editar_rol.html', {'form': form, 'rol': rol, 'modulos': MODULOS})
+
+
+@login_required
+@role_required(ROLE_ADMIN)
+def eliminar_rol(request, pk):
+    from django.contrib.auth.models import Group
+    rol = get_object_or_404(Group, pk=pk)
+    if request.method == 'POST':
+        nombre = rol.name
+        rol.delete()
+        messages.success(request, f'Rol "{nombre}" eliminado.')
+        return redirect('inventario:lista_roles')
+    return render(request, 'inventario/eliminar_rol.html', {'rol': rol})

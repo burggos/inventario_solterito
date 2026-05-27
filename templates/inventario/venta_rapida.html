@@ -101,13 +101,7 @@
                     class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 dark:bg-gray-700 dark:text-white transition"
                     placeholder="Observaciones..."></textarea>
             </div>
-            <label class="flex items-start gap-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-900/20 px-3 py-3 cursor-pointer">
-                <input type="checkbox" id="pedido-encargo-toggle" class="mt-0.5 h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500">
-                <span>
-                    <span class="block text-sm font-semibold text-amber-800 dark:text-amber-200">Registrar como pedido por encargo</span>
-                    <span class="block text-xs text-amber-700/90 dark:text-amber-300/90 mt-1">Guarda la venta como pendiente y no descuenta stock todavia. Usalo cuando el cliente encargue productos que aun no tienes disponibles.</span>
-                </span>
-            </label>
+
         </div>
 
         <!-- Summary -->
@@ -229,7 +223,6 @@ const POS = {
             this.selectedClienteId = data.selectedClienteId || null;
             this.descuentoManualPorcentaje = parseFloat(data.descuentoManualPorcentaje || 0);
 
-            document.getElementById('pedido-encargo-toggle').checked = this.isPendingOrder;
             document.getElementById('cliente-select').value = this.selectedClienteId || '';
             document.getElementById('descuento-manual').value = this.descuentoManualPorcentaje;
             document.getElementById('cliente-nombre').value = data.clienteNombre || 'Cliente General';
@@ -265,7 +258,6 @@ const POS = {
         document.getElementById('btn-limpiar').addEventListener('click', () => this.clear());
         document.getElementById('cliente-select').addEventListener('change', e => this.onClienteChange(e.target.value));
         document.getElementById('descuento-manual').addEventListener('input', e => this.onManualDiscountChange(e.target.value));
-        document.getElementById('pedido-encargo-toggle').addEventListener('change', e => this.onPendingToggle(e.target.checked));
         document.addEventListener('keydown', e => this.onGlobalKey(e));
         cartBody.addEventListener('click', e => {
             const actionBtn = e.target.closest('[data-cart-action]');
@@ -316,13 +308,13 @@ const POS = {
         }
         el.innerHTML = products.map((p, i) => `
             <div class="search-result px-4 py-2.5 cursor-pointer flex justify-between items-center border-b border-gray-100 dark:border-gray-700 last:border-0 transition"
-                 data-idx="${i}" data-id="${p.id}" data-nombre="${this.esc(p.nombre)}" data-precio="${p.precio}" data-stock="${p.stock}">
+                 data-idx="${i}" data-id="${p.id}" data-nombre="${this.esc(p.nombre)}" data-precio="${p.precio_venta || p.precio}" data-stock="${p.stock}">
                 <div class="min-w-0">
                     <span class="font-medium text-gray-800 dark:text-white text-sm">${this.esc(p.nombre)}</span>
                     ${p.codigo_barras ? `<span class="text-xs text-gray-400 ml-2">${this.esc(p.codigo_barras)}</span>` : ''}
                 </div>
                 <div class="text-right flex-shrink-0 ml-3">
-                    <span class="font-semibold text-teal-600 dark:text-teal-400 text-sm">COP ${this.fmt(p.precio)}</span>
+                    <span class="font-semibold text-teal-600 dark:text-teal-400 text-sm">COP ${this.fmt(p.precio_venta || p.precio)}</span>
                     <span class="text-xs ml-2 ${p.stock <= 5 ? 'text-red-500' : 'text-gray-400'}">Stock: ${p.stock}</span>
                 </div>
             </div>
@@ -445,12 +437,6 @@ const POS = {
         this.saveState();
     },
 
-    onPendingToggle(isPending) {
-        this.isPendingOrder = Boolean(isPending);
-        this.saveState();
-        this.updateUI();
-    },
-
     async onClienteChange(clienteId) {
         this.selectedClienteId = clienteId || null;
         if (!clienteId) {
@@ -518,7 +504,8 @@ const POS = {
                             <button type="button" data-cart-action="decrement" data-item-id="${i.id}" class="px-2.5 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-300 text-sm font-bold">&minus;</button>
                             <input type="number" value="${i.qty}" min="1" ${this.isPendingOrder ? '' : `max="${i.stock}"`}
                                    data-cart-qty-input data-item-id="${i.id}"
-                                   class="w-10 text-center text-sm border-x border-gray-300 dark:border-gray-600 py-1 bg-transparent dark:text-white focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
+                                   style="field-sizing:content; min-width:4ch"
+                                   class="text-center text-sm border-x border-gray-300 dark:border-gray-600 py-1 bg-transparent dark:text-white focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
                             <button type="button" data-cart-action="increment" data-item-id="${i.id}" class="px-2.5 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-300 text-sm font-bold">+</button>
                         </div>
                     </td>
@@ -541,9 +528,7 @@ const POS = {
         document.getElementById('summary-discount-breakdown').textContent = `Cliente ${this.descuentoClientePorcentaje.toFixed(2)}% + Manual ${this.descuentoManualPorcentaje.toFixed(2)}%`;
         document.getElementById('summary-total').textContent = `COP ${this.fmt(total)}`;
         document.getElementById('btn-confirmar').disabled = !this.cart.length;
-        document.getElementById('btn-confirmar').textContent = this.isPendingOrder
-            ? 'Registrar Pedido (F9)'
-            : 'Confirmar Venta (F9)';
+        document.getElementById('btn-confirmar').textContent = 'Confirmar Venta (F9)';
         this.saveState();
     },
 
@@ -592,7 +577,7 @@ const POS = {
             if (window.AppUX?.endButtonLoading && state) {
                 window.AppUX.endButtonLoading(btn, state, !this.cart.length);
             } else {
-                btn.textContent = this.isPendingOrder ? 'Registrar Pedido (F9)' : 'Confirmar Venta (F9)';
+                btn.textContent = 'Confirmar Venta (F9)';
                 btn.disabled = !this.cart.length;
             }
         }
@@ -606,7 +591,6 @@ const POS = {
         this.descuentoClientePorcentaje = 0;
         this.descuentoManualPorcentaje = 0;
         this.clearState();
-        document.getElementById('pedido-encargo-toggle').checked = false;
         document.getElementById('cliente-select').value = '';
         document.getElementById('descuento-manual').value = '0';
         document.getElementById('cliente-nombre').value = 'Cliente General';

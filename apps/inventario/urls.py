@@ -59,4 +59,16 @@ urlpatterns = [
     path('api/clientes/<int:pk>/descuento/', views.api_cliente_descuento, name='api_cliente_descuento'),
     path('api/pos/venta/', views.api_pos_venta, name='api_pos_venta'),
     path('api/pos/compra/', views.api_pos_compra, name='api_pos_compra'),
+    path('api/ajuste-inventario/', views.api_ajuste_inventario, name='api_ajuste_inventario'),
+
+    # Usuarios (solo Administrador)
+    path('usuarios/', views.lista_usuarios, name='lista_usuarios'),
+    path('usuarios/nuevo/', views.crear_usuario, name='crear_usuario'),
+    path('usuarios/<int:pk>/editar/', views.editar_usuario, name='editar_usuario'),
+
+    # Roles (solo Administrador)
+    path('roles/', views.lista_roles, name='lista_roles'),
+    path('roles/nuevo/', views.crear_rol, name='crear_rol'),
+    path('roles/<int:pk>/editar/', views.editar_rol, name='editar_rol'),
+    path('roles/<int:pk>/eliminar/', views.eliminar_rol, name='eliminar_rol'),
 ]

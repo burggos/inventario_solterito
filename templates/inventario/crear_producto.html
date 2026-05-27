@@ -29,7 +29,7 @@
 
             <div id="step-1" class="grid grid-cols-1 gap-6 md:grid-cols-2">
                 {% for field in form %}
-                    {% if field.name == 'nombre' or field.name == 'descripcion' or field.name == 'categoria' or field.name == 'proveedor' or field.name == 'codigo_barras' %}
+                    {% if field.name == 'nombre' or field.name == 'descripcion' or field.name == 'categoria' or field.name == 'proveedor' %}
                     <div class="w-full {% if field.name == 'descripcion' %}md:col-span-2{% endif %}">
                         <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             {{ field.label }}{% if field.field.required %} <span class="text-red-500">*</span>{% endif %}
@@ -65,7 +65,7 @@
             <div id="step-2" class="hidden">
                 <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
                     {% for field in form %}
-                        {% if field.name == 'precio' or field.name == 'stock_minimo' or field.name == 'stock_inicial' %}
+                        {% if field.name == 'precio_compra' or field.name == 'precio_venta' or field.name == 'stock_minimo' or field.name == 'stock_inicial' %}
                         <div class="w-full">
                             <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 {{ field.label }}{% if field.field.required %} <span class="text-red-500">*</span>{% endif %}
@@ -87,7 +87,8 @@
                     <p class="text-sm text-gray-700 dark:text-gray-300"><span class="font-medium">Producto:</span> <span id="summary-nombre">-</span></p>
                     <p class="text-sm text-gray-700 dark:text-gray-300"><span class="font-medium">Categoría:</span> <span id="summary-categoria">-</span></p>
                     <p class="text-sm text-gray-700 dark:text-gray-300"><span class="font-medium">Proveedor:</span> <span id="summary-proveedor">-</span></p>
-                    <p class="text-sm text-gray-700 dark:text-gray-300"><span class="font-medium">Precio:</span> <span id="summary-precio">-</span></p>
+                    <p class="text-sm text-gray-700 dark:text-gray-300"><span class="font-medium">Precio compra:</span> <span id="summary-precio-compra">-</span></p>
+                    <p class="text-sm text-gray-700 dark:text-gray-300"><span class="font-medium">Precio venta:</span> <span id="summary-precio-venta">-</span></p>
                     <p class="text-sm text-gray-700 dark:text-gray-300"><span class="font-medium">Stock inicial:</span> <span id="summary-stock">-</span></p>
                 </div>
             </div>
@@ -117,7 +118,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnSubmit = document.getElementById('btn-submit');
 
     const inputNombre = document.querySelector('[name="nombre"]');
-    const inputPrecio = document.querySelector('[name="precio"]');
+    const inputPrecioCompra = document.querySelector('[name="precio_compra"]');
+    const inputPrecioVenta = document.querySelector('[name="precio_venta"]');
     const inputStockInicial = document.querySelector('[name="stock_inicial"]');
     const selectCategoria = document.querySelector('[name="categoria"]');
     const selectProveedor = document.querySelector('[name="proveedor"]');
@@ -145,7 +147,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('summary-nombre').textContent = inputNombre?.value || '-';
         document.getElementById('summary-categoria').textContent = selectCategoria?.selectedOptions?.[0]?.textContent || '-';
         document.getElementById('summary-proveedor').textContent = selectProveedor?.selectedOptions?.[0]?.textContent || '-';
-        document.getElementById('summary-precio').textContent = inputPrecio?.value ? `COP ${Number(inputPrecio.value || 0).toLocaleString('es-CO')}` : '-';
+        document.getElementById('summary-precio-compra').textContent = inputPrecioCompra?.value ? `COP ${Number(inputPrecioCompra.value || 0).toLocaleString('es-CO')}` : '-';
+        document.getElementById('summary-precio-venta').textContent = inputPrecioVenta?.value ? `COP ${Number(inputPrecioVenta.value || 0).toLocaleString('es-CO')}` : '-';
         document.getElementById('summary-stock').textContent = inputStockInicial?.value || '0';
     }
 

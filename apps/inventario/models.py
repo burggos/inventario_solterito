@@ -37,7 +37,15 @@ class Producto(models.Model):
         help_text='Proveedor principal que surte este producto',
     )
     precio = models.DecimalField(max_digits=10, decimal_places=2)
-    stock = models.PositiveIntegerField(default=0)
+    precio_compra = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text="Precio al que se compra este producto al proveedor"
+    )
+    precio_venta = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text="Precio al que se vende este producto al cliente"
+    )
+    stock = models.IntegerField(default=0)
     stock_minimo = models.PositiveIntegerField(default=5, help_text="Cantidad mínima para alertar")
     imagen = models.ImageField(upload_to='productos/', blank=True, null=True)
     codigo_barras = models.CharField(max_length=50, blank=True, null=True, unique=True)
@@ -51,6 +59,13 @@ class Producto(models.Model):
         ordering = ['nombre']
         permissions = [
             ('manage_product_catalog', 'Puede gestionar catalogo de productos'),
+            ('ver_productos',   'Puede ver módulo de Productos'),
+            ('ver_clientes',    'Puede ver módulo de Clientes'),
+            ('ver_proveedores', 'Puede ver módulo de Proveedores'),
+            ('ver_ventas',      'Puede ver módulo de Ventas'),
+            ('ver_compras',     'Puede ver módulo de Compras'),
+            ('ver_movimientos', 'Puede ver módulo de Movimientos'),
+            ('ver_reportes',    'Puede ver módulo de Reportes'),
         ]
 
     def __str__(self):
@@ -62,8 +77,6 @@ class Producto(models.Model):
 
         if self.precio is not None and self.precio < 0:
             raise ValidationError({'precio': 'El precio no puede ser negativo.'})
-        if self.stock < 0:
-            raise ValidationError({'stock': 'El stock no puede ser negativo.'})
         if self.stock_minimo < 0:
             raise ValidationError({'stock_minimo': 'El stock mínimo no puede ser negativo.'})
 
@@ -90,7 +103,7 @@ class Movimiento(models.Model):
     
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE, related_name='movimientos')
     tipo = models.CharField(max_length=10, choices=TIPO_MOVIMIENTO)
-    cantidad = models.PositiveIntegerField()
+    cantidad = models.IntegerField()
     fecha = models.DateTimeField(default=timezone.now)
     descripcion = models.TextField(blank=True, help_text="Motivo del movimiento")
     usuario = models.CharField(max_length=100, blank=True)  # Podrías relacionarlo con User después
@@ -131,6 +144,13 @@ class Movimiento(models.Model):
                     raise ValidationError(
                         {'cantidad': f'Stock insuficiente para salida de {self.producto.nombre}.'}
                     )
+
+            elif self.tipo == 'ajuste':
+                updated = Producto.objects.filter(pk=self.producto_id).update(
+                    stock=self.cantidad
+                )
+                if not updated:
+                    raise ValidationError('No se pudo actualizar stock del producto.')
 
             super().save(*args, **kwargs)
 

@@ -135,7 +135,9 @@ for nombre, cat_name, precio, costo, stock_min in PRODUCTOS_DATA:
     prod = Producto(
         nombre=nombre,
         categoria=cats[cat_name],
-        precio=Decimal(str(precio)),
+        precio=Decimal(str(precio)),          # Campo base (sincronizado con precio_venta)
+        precio_venta=Decimal(str(precio)),
+        precio_compra=Decimal(str(costo)),
         stock=0,  # Se irá ajustando con movimientos
         stock_minimo=stock_min,
         activo=True,
@@ -154,9 +156,7 @@ END_DATE = date(2026, 4, 19)  # Hoy
 
 # Para no disparar signals que actualicen stock, vamos a crear movimientos
 # y luego ajustar el stock manualmente al final
-from django.db.models.signals import post_save
-from inventario.signals import actualizar_stock
-post_save.disconnect(actualizar_stock, sender=Movimiento)
+# Stock se actualiza directamente en Movimiento.save(); no hay signal que desconectar.
 
 movimientos_creados = 0
 stock_tracker = {p.pk: 0 for p in productos}
@@ -315,13 +315,14 @@ while current <= END_DATE:
                 [Decimal('0'), Decimal('5'), Decimal('10'), Decimal('15')],
                 weights=[70, 15, 10, 5]
             )[0]
-            subtotal = (qty * prod.precio) * (1 - descuento / 100)
+            precio_venta_prod = prod.precio_venta or prod.precio
+            subtotal = (qty * precio_venta_prod) * (1 - descuento / 100)
             total_venta += subtotal
             
             detalles_temp.append({
                 'producto': prod,
                 'cantidad': qty,
-                'precio_unitario': prod.precio,
+                'precio_unitario': precio_venta_prod,
                 'descuento_porcentaje': descuento,
                 'subtotal': subtotal,
             })
@@ -403,8 +404,7 @@ for prod in productos:
     Producto.objects.filter(pk=prod.pk).update(stock=final_stock)
 print("  ✔ Stock actualizado según movimientos")
 
-# Reconectar signal
-post_save.connect(actualizar_stock, sender=Movimiento)
+# Signal ya no existe; no hay nada que reconectar.
 
 # ── 7. Resumen ──
 print("\n[7/7] Resumen final:")

@@ -21,6 +21,8 @@ class Command(BaseCommand):
             'view_detalleventa', 'add_detalleventa',
             'register_sales', 'generate_invoice_pdf',
             'view_cliente',
+            # módulos visibles en sidebar
+            'ver_productos', 'ver_clientes', 'ver_ventas',
         ]
         vendedor.permissions.set(Permission.objects.filter(codename__in=vendedor_codes))
 
@@ -33,6 +35,8 @@ class Command(BaseCommand):
             'view_detallecompra', 'add_detallecompra', 'change_detallecompra',
             'view_proveedor', 'add_proveedor', 'change_proveedor',
             'view_cliente',
+            # módulos visibles en sidebar
+            'ver_productos', 'ver_proveedores', 'ver_compras', 'ver_movimientos',
         ]
         bodeguero.permissions.set(Permission.objects.filter(codename__in=bodeguero_codes))
 

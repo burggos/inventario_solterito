@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% load static role_tags %}
+
+{% block title %}Roles - El Solterito{% endblock %}
+{% block page_title %}Roles{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div>
+        <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Gestión de Roles</h2>
+        <p class="text-gray-500 dark:text-gray-400 mt-1">Administra los roles disponibles en el sistema</p>
+    </div>
+    <div class="flex items-center gap-3">
+        <a href="{% url 'inventario:crear_usuario' %}" class="btn-secondary inline-flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+            Nuevo Usuario
+        </a>
+        <a href="{% url 'inventario:crear_rol' %}" class="btn-primary inline-flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Nuevo Rol
+        </a>
+    </div>
+</div>
+
+<div class="space-y-4">
+    {% for rol in roles %}
+    <div class="card p-5">
+        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <!-- Nombre del rol -->
+            <div class="flex items-center gap-3 min-w-0">
+                {% if rol.name == 'Administrador' %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 flex-shrink-0">{{ rol.name }}</span>
+                {% elif rol.name == 'Vendedor' %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 flex-shrink-0">{{ rol.name }}</span>
+                {% elif rol.name == 'Bodeguero' %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 flex-shrink-0">{{ rol.name }}</span>
+                {% else %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 flex-shrink-0">{{ rol.name }}</span>
+                {% endif %}
+                <span class="text-xs text-gray-400">{{ rol.num_usuarios }} {% if rol.num_usuarios == 1 %}usuario{% else %}usuarios{% endif %}</span>
+            </div>
+            <!-- Acciones -->
+            <div class="inline-flex items-center gap-3 flex-shrink-0">
+                <a href="{% url 'inventario:editar_rol' rol.pk %}" class="text-sm text-teal-600 dark:text-teal-400 hover:underline">Editar</a>
+                {% if rol.num_usuarios == 0 %}
+                <a href="{% url 'inventario:eliminar_rol' rol.pk %}" class="text-sm text-red-500 dark:text-red-400 hover:underline">Eliminar</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Usuarios del rol -->
+        {% with usuarios=rol.user_set.all %}
+        {% if usuarios %}
+        <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+            <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Usuarios</p>
+            <div class="flex flex-wrap gap-2">
+                {% for u in usuarios %}
+                <a href="{% url 'inventario:editar_usuario' u.pk %}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition">
+                    <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                    {{ u.username }}
+                    {% if not u.is_active %}<span class="text-red-400">(inactivo)</span>{% endif %}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <p class="mt-3 text-xs text-gray-400 dark:text-gray-500 italic">Sin usuarios asignados.</p>
+        {% endif %}
+        {% endwith %}
+    </div>
+    {% empty %}
+    <div class="card p-8 text-center text-gray-400 dark:text-gray-500">No hay roles registrados.</div>
+    {% endfor %}
+</div>
+{% endblock %}

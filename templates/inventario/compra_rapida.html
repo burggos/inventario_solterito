@@ -419,13 +419,13 @@ const COMPRA = {
 
         el.innerHTML = products.map((p, i) => `
             <div class="search-result px-4 py-2.5 cursor-pointer flex justify-between items-center border-b border-gray-100 dark:border-gray-700 last:border-0 transition"
-                 data-idx="${i}" data-id="${p.id}" data-nombre="${this.esc(p.nombre)}" data-precio="${p.precio}" data-stock="${p.stock}">
+                 data-idx="${i}" data-id="${p.id}" data-nombre="${this.esc(p.nombre)}" data-precio="${p.precio_compra || p.precio}" data-stock="${p.stock}">
                 <div class="min-w-0">
                     <span class="font-medium text-gray-800 dark:text-white text-sm">${this.esc(p.nombre)}</span>
                     ${p.codigo_barras ? `<span class="text-xs text-gray-400 ml-2">${this.esc(p.codigo_barras)}</span>` : ''}
                 </div>
                 <div class="text-right flex-shrink-0 ml-3">
-                    <span class="font-semibold text-blue-600 dark:text-blue-400 text-sm">COP ${this.fmt(p.precio)}</span>
+                    <span class="font-semibold text-blue-600 dark:text-blue-400 text-sm">COP ${this.fmt(p.precio_compra || p.precio)}</span>
                     <span class="text-xs ml-2 text-gray-400">Stock: ${p.stock}</span>
                 </div>
             </div>
@@ -531,13 +531,14 @@ const COMPRA = {
                     <td class="px-4 py-2 text-center">
                         <div class="inline-flex items-center border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
                             <button type="button" data-cart-action="decrement" data-item-id="${i.id}" class="px-2.5 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-300 text-sm font-bold">&minus;</button>
-                            <input type="number" value="${i.qty}" min="1" data-cart-qty-input data-item-id="${i.id}" class="w-10 text-center text-sm border-x border-gray-300 dark:border-gray-600 py-1 bg-transparent dark:text-white focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
+                            <input type="number" value="${i.qty}" min="1" data-cart-qty-input data-item-id="${i.id}"
+                                   style="field-sizing:content; min-width:4ch"
+                                   class="text-center text-sm border-x border-gray-300 dark:border-gray-600 py-1 bg-transparent dark:text-white focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
                             <button type="button" data-cart-action="increment" data-item-id="${i.id}" class="px-2.5 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-300 text-sm font-bold">+</button>
                         </div>
                     </td>
                     <td class="px-4 py-2 text-right">
                         <input type="number" value="${i.precio}" min="0" step="100" data-cart-price-input data-item-id="${i.id}" class="w-28 text-right text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 bg-transparent dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
-                        ${this.referenceLabel(i.id)}
                     </td>
                     <td class="px-4 py-2 text-right font-semibold text-gray-800 dark:text-white text-sm">COP ${this.fmt(i.precio * i.qty)}</td>
                     <td class="px-2 py-2 text-center">

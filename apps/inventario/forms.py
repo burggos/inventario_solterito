@@ -1,8 +1,134 @@
 from django import forms
+from django.contrib.auth.models import User, Group
 from django.db.models import Q
 from .models import Movimiento, Producto, Categoria, Proveedor
 
 INPUT_CLS = 'mt-1 block w-full rounded-md border-gray-100 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400'
+
+ROLES = [
+    ('Administrador', 'Administrador'),
+    ('Vendedor', 'Vendedor'),
+    ('Bodeguero', 'Bodeguero'),
+]
+
+# Módulos configurables por rol (codename, etiqueta)
+MODULOS = [
+    ('ver_productos',   'Productos'),
+    ('ver_clientes',    'Clientes'),
+    ('ver_proveedores', 'Proveedores'),
+    ('ver_ventas',      'Ventas'),
+    ('ver_compras',     'Compras'),
+    ('ver_movimientos', 'Movimientos / Ajuste de inventario'),
+    ('ver_reportes',    'Reportes'),
+]
+
+
+class RolForm(forms.Form):
+    nombre = forms.CharField(
+        label='Nombre del rol',
+        max_length=80,
+        widget=forms.TextInput(attrs={'class': INPUT_CLS, 'placeholder': 'Ej: Supervisor, Cajero...', 'autocomplete': 'off'}),
+    )
+    modulos = forms.MultipleChoiceField(
+        label='Módulos visibles',
+        choices=MODULOS,
+        required=False,
+        widget=forms.CheckboxSelectMultiple(),
+    )
+
+    def __init__(self, *args, group_instance=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._group_instance = group_instance
+
+    def clean_nombre(self):
+        from django.contrib.auth.models import Group
+        nombre = self.cleaned_data['nombre'].strip()
+        qs = Group.objects.filter(name__iexact=nombre)
+        if self._group_instance:
+            qs = qs.exclude(pk=self._group_instance.pk)
+        if qs.exists():
+            raise forms.ValidationError('Ya existe un rol con ese nombre.')
+        return nombre
+
+
+class CrearUsuarioForm(forms.Form):
+    username = forms.CharField(
+        label='Nombre de usuario',
+        widget=forms.TextInput(attrs={'class': INPUT_CLS, 'placeholder': 'ej. maria.lopez', 'autocomplete': 'off'}),
+    )
+    first_name = forms.CharField(
+        label='Nombre', required=False,
+        widget=forms.TextInput(attrs={'class': INPUT_CLS, 'placeholder': 'Nombre'}),
+    )
+    last_name = forms.CharField(
+        label='Apellido', required=False,
+        widget=forms.TextInput(attrs={'class': INPUT_CLS, 'placeholder': 'Apellido'}),
+    )
+    rol = forms.ChoiceField(
+        label='Rol',
+        choices=ROLES,
+        widget=forms.Select(attrs={'class': INPUT_CLS}),
+    )
+    password1 = forms.CharField(
+        label='Contraseña',
+        widget=forms.PasswordInput(attrs={'class': INPUT_CLS, 'autocomplete': 'new-password'}),
+    )
+    password2 = forms.CharField(
+        label='Confirmar contraseña',
+        widget=forms.PasswordInput(attrs={'class': INPUT_CLS, 'autocomplete': 'new-password'}),
+    )
+
+    def clean_username(self):
+        username = self.cleaned_data['username'].strip()
+        if User.objects.filter(username=username).exists():
+            raise forms.ValidationError('Ya existe un usuario con ese nombre.')
+        return username
+
+    def clean(self):
+        cleaned_data = super().clean()
+        p1 = cleaned_data.get('password1')
+        p2 = cleaned_data.get('password2')
+        if p1 and p2 and p1 != p2:
+            raise forms.ValidationError('Las contraseñas no coinciden.')
+        return cleaned_data
+
+
+class EditarUsuarioForm(forms.Form):
+    first_name = forms.CharField(
+        label='Nombre', required=False,
+        widget=forms.TextInput(attrs={'class': INPUT_CLS}),
+    )
+    last_name = forms.CharField(
+        label='Apellido', required=False,
+        widget=forms.TextInput(attrs={'class': INPUT_CLS}),
+    )
+    rol = forms.ChoiceField(
+        label='Rol',
+        choices=ROLES,
+        widget=forms.Select(attrs={'class': INPUT_CLS}),
+    )
+    is_active = forms.BooleanField(
+        label='Usuario activo', required=False,
+        widget=forms.CheckboxInput(attrs={'class': 'rounded border-gray-300 text-teal-600 focus:ring-teal-500'}),
+    )
+    password1 = forms.CharField(
+        label='Nueva contraseña', required=False,
+        help_text='Déjalo en blanco para no cambiarla.',
+        widget=forms.PasswordInput(attrs={'class': INPUT_CLS, 'autocomplete': 'new-password', 'placeholder': 'Sin cambios'}),
+    )
+    password2 = forms.CharField(
+        label='Confirmar nueva contraseña', required=False,
+        widget=forms.PasswordInput(attrs={'class': INPUT_CLS, 'autocomplete': 'new-password', 'placeholder': 'Sin cambios'}),
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        p1 = cleaned_data.get('password1')
+        p2 = cleaned_data.get('password2')
+        if p1 and p2 and p1 != p2:
+            raise forms.ValidationError('Las contraseñas no coinciden.')
+        return cleaned_data
+
 
 class CategoriaForm(forms.ModelForm):
     class Meta:
@@ -27,7 +153,7 @@ class ProductoForm(forms.ModelForm):
 
     class Meta:
         model = Producto
-        fields = ['nombre', 'descripcion', 'categoria', 'proveedor', 'precio', 'stock_minimo', 'codigo_barras']
+        fields = ['nombre', 'descripcion', 'categoria', 'proveedor', 'precio_compra', 'precio_venta', 'stock_minimo']
         widgets = {
             'nombre': forms.TextInput(attrs={
                 'class': 'mt-1 block w-full rounded-md border-gray-100 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400',
@@ -44,9 +170,15 @@ class ProductoForm(forms.ModelForm):
             'proveedor': forms.Select(attrs={
                 'class': 'mt-1 block w-full rounded-md border-gray-100 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200'
             }),
-            'precio': forms.NumberInput(attrs={
+            'precio_compra': forms.NumberInput(attrs={
                 'class': 'mt-1 block w-full rounded-md border-gray-100 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400',
-                'placeholder': 'Ej. 10000 (COP)'
+                'placeholder': 'Ej. 8000 (COP)',
+                'step': '0.01',
+            }),
+            'precio_venta': forms.NumberInput(attrs={
+                'class': 'mt-1 block w-full rounded-md border-gray-100 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400',
+                'placeholder': 'Ej. 12000 (COP)',
+                'step': '0.01',
             }),
             'stock': forms.NumberInput(attrs={
                 'class': 'mt-1 block w-full rounded-md border-gray-100 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400',
@@ -67,6 +199,14 @@ class ProductoForm(forms.ModelForm):
         self.fields['proveedor'].queryset = Proveedor.objects.filter(activo=True).order_by('nombre')
         self.fields['proveedor'].required = False
         self.similares_sugeridos = []
+
+    def save(self, commit=True):
+        producto = super().save(commit=False)
+        # precio (campo requerido del modelo) se sincroniza con precio_venta o precio_compra
+        producto.precio = producto.precio_venta or producto.precio_compra or producto.precio or 0
+        if commit:
+            producto.save()
+        return producto
 
     def clean_nombre(self):
         nombre = (self.cleaned_data.get('nombre') or '').strip()

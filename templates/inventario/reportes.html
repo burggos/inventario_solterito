@@ -437,7 +437,7 @@
             <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">Productos con Menor Rotación</h3>
             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">Bajo movimiento</span>
         </div>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Productos que menos se venden — posible sobrestock</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Productos que se venden poco — posible sobrestock o baja demanda</p>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead>
@@ -672,15 +672,17 @@ document.addEventListener('DOMContentLoaded', function() {
     // ── 4. Top 5 Productos por Ingresos (Barras Horizontales) ──
     const topData = {{ top_productos_chart_json|safe }};
     if (topData.length) {
+        // Ordenar por ingresos para que el título del gráfico sea preciso
+        const topDataByRevenue = [...topData].sort((a, b) => b.revenue - a.revenue);
         new Chart(document.getElementById('topProductosChart').getContext('2d'), {
             type: 'bar',
             data: {
-                labels: topData.map(p => p.nombre),
+                labels: topDataByRevenue.map(p => p.nombre),
                 datasets: [{
                     label: 'Ingresos (COP)',
-                    data: topData.map(p => p.revenue),
-                    backgroundColor: paleta.slice(0, topData.length).map(c => c + 'cc'),
-                    borderColor: paleta.slice(0, topData.length),
+                    data: topDataByRevenue.map(p => p.revenue),
+                    backgroundColor: paleta.slice(0, topDataByRevenue.length).map(c => c + 'cc'),
+                    borderColor: paleta.slice(0, topDataByRevenue.length),
                     borderWidth: 2, borderRadius: 5
                 }]
             },
