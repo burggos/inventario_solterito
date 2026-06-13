@@ -36,3 +36,4 @@ db.sqlite3
 
 # Text
 UX_UI_FLUJO_CASOS_DE_USO_MEJORAS.md
+node_modules/

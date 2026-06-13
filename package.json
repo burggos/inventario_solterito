@@ -1,0 +1,19 @@
+{
+  "name": "inventario_solterito",
+  "version": "1.0.0",
+  "description": "Aplicación web desarrollada con Django para la gestión integral de inventario, ventas y compras de la tienda **El Solterito**. Permite administrar productos, categorías, proveedores, movimientos de stock, órdenes de compra y ventas con punto de venta (POS).",
+  "main": "index.js",
+  "scripts": {
+    "build:css": "npx tailwindcss -i ./static/css/input.css -o ./static/css/estilo.css --minify",
+    "watch:css": "npx tailwindcss -i ./static/css/input.css -o ./static/css/estilo.css --watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.1",
+    "autoprefixer": "^10.5.0",
+    "postcss": "^8.5.15",
+    "tailwindcss": "^3.4.19"
+  }
+}
